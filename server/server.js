@@ -16,6 +16,11 @@ app.post(
   express.raw({ type: "application/json" }),
   clerkWebhooks,
 );
+app.post(
+  "/api/stripe",
+  express.raw({ type: "application/json" }),
+  stripeWebhooks,
+);
 
 app.use(express.json());
 app.use(clerkMiddleware());

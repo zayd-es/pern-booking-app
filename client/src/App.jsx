@@ -14,6 +14,7 @@ import { useAppStore } from "./store/useAppStore";
 import { useEffect } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import AllRooms from "./pages/allRooms/AllRooms";
+import Loader from "./components/common/Loader";
 
 const App = () => {
   const showHotelReg = useAppStore((state) => state.showHotelReg);
@@ -23,7 +24,7 @@ const App = () => {
 
   const fetchUser = useAppStore((state) => state.fetchUser);
   useEffect(() => {
-    fetchRooms(); // 👈 هادي هي اللي كترسل الطلب للباكيند فاش كيتفتح السيت
+    fetchRooms();
   }, [fetchRooms]);
   useEffect(() => {
     if (isLoaded && user) {
@@ -40,6 +41,8 @@ const App = () => {
           <Route path="rooms" element={<AllRooms />} />
           <Route path="rooms/:id" element={<RoomDetails />} />
           <Route path="my-bookings" element={<MyBooking />} />
+          <Route path="my-bookings" element={<MyBooking />} />
+          <Route path="/loader/:nextUrl" element={<Loader />} />
         </Route>
 
         <Route path="/owner" element={<Layout />}>
