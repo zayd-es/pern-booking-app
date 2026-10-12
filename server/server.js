@@ -7,6 +7,7 @@ import userRouter from "./routes/user.js";
 import hotelRouter from "./routes/hotel.js";
 import roomRouter from "./routes/room.js";
 import bookingRouter from "./routes/booking.js";
+import { stripeWebhooks } from "./controllers/stripeWebhooks.js";
 
 const app = express();
 app.use(cors());
