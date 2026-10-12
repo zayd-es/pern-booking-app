@@ -32,7 +32,7 @@ export const stripeWebhooks = async (request, response) => {
     await prisma.booking.update({
       where: { id: bookingId },
       data: {
-        isPaid: true,
+        status: "CONFIRMED",
         paymentMethod: "Stripe",
       },
     });
