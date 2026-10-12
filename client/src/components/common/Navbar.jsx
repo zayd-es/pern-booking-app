@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { assets } from "../../assets/assets";
 import { useClerk, useUser, UserButton } from "@clerk/clerk-react";
+import { useAppStore } from "../../store/useAppStore";
 
 const BookIcon = () => (
   <svg
@@ -28,6 +29,9 @@ export const Navbar = () => {
   const { user } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isOwner = useAppStore((state) => state.isOwner);
+  const setShowHotelReg = useAppStore((state) => state.setShowHotelReg);
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -89,14 +93,18 @@ export const Navbar = () => {
             />
           </Link>
         ))}
-        <button
-          onClick={() => navigate("/owner")}
-          className={`border px-4 py-1 text-sm font-light rounded-full cursor-pointer ${
-            isScrolled ? "text-black border-black" : "text-white border-white"
-          } transition-all`}
-        >
-          Dashboard
-        </button>
+        {user && (
+          <button
+            onClick={() =>
+              isOwner ? navigate("/owner") : setShowHotelReg(true)
+            }
+            className={`border px-4 py-1 text-sm font-light rounded-full cursor-pointer ${
+              isScrolled ? "text-black border-black" : "text-white border-white"
+            } transition-all`}
+          >
+            {isOwner ? "Dashboard" : "List Your Hotel"}
+          </button>
+        )}
       </div>
 
       {/* Desktop Right */}
@@ -171,11 +179,11 @@ export const Navbar = () => {
           <button
             onClick={() => {
               setIsMenuOpen(false);
-              navigate("/owner");
+              isOwner ? navigate("/owner") : setShowHotelReg(true);
             }}
             className="border border-black px-4 py-1 text-sm font-light rounded-full cursor-pointer transition-all"
           >
-            Dashboard
+            {isOwner ? "Dashboard" : "List Your Hotel"}
           </button>
         )}
         {!user && (

@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { assets } from "../../assets/assets";
 import Title from "../../components/common/Title";
+import { useAuth } from "@clerk/clerk-react";
+import toast from "react-hot-toast";
+import API from "../../lib/axios";
 
 const AddRoom = () => {
+  const { getToken } = useAuth();
   const [images, setImages] = useState({
     1: null,
     2: null,
@@ -15,15 +19,73 @@ const AddRoom = () => {
     pricePerNight: 0,
     amenities: {
       "Free Wifi": false,
-      "Free BreeakFast": false,
+      "Free BreakFast": false,
       "Room Service": false,
       "Mountain View": false,
       "Pool Access": false,
     },
   });
+  const [loading, setLoading] = useState(false);
+  const onSubmitHandler = async (e) => {
+    e.preventDefault();
+
+    const hasImages = Object.values(images || {}).some((image) =>
+      Boolean(image),
+    );
+    if (!hasImages) {
+      toast.error("Please upload at least one room image.");
+      return;
+    }
+    if (!inputs.roomType || inputs.pricePerNight <= 0) {
+      toast.error("Please provide a valid room type and price per night.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const formData = new FormData();
+
+      formData.append("roomType", inputs.roomType);
+      formData.append("pricePerNight", inputs.pricePerNight);
+
+      const selectedAmenities = Object.keys(inputs.amenities || {}).filter(
+        (key) => inputs.amenities[key],
+      );
+      formData.append("amenities", JSON.stringify(selectedAmenities));
+
+      Object.values(images)
+        .filter(Boolean)
+        .forEach((image) => formData.append("images", image));
+
+      const { data } = await API.post("/api/rooms", formData, {
+        headers: { Authorization: `Bearer ${await getToken()}` },
+      });
+      if (data.success) {
+        toast.success(data.message);
+        setInputs({
+          roomType: "",
+          pricePerNight: 0,
+          amenities: {
+            "Free Wifi": false,
+            "Free BreeakFast": false,
+            "Room Service": false,
+            "Mountain View": false,
+            "Pool Access": false,
+          },
+        });
+        setImages({ 1: null, 2: null, 3: null, 4: null });
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast.error(error?.response?.data?.message || "Failed to submit form");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <form>
+    <form onSubmit={onSubmitHandler}>
       <Title
         align="left"
         font="outfit"
@@ -104,8 +166,15 @@ const AddRoom = () => {
             <label htmlFor={amenity}> {amenity}</label>
           </div>
         ))}
-        <button className="bg-primary  text-white px-8 py-2 rounded mt-8 cursor-pointer">
-          add Room
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-primary text-white px-8 py-2 rounded mt-8 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {loading && (
+            <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+          )}
+          {loading ? "Adding..." : "Add Room"}
         </button>
       </div>
     </form>

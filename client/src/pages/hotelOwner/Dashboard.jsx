@@ -1,9 +1,54 @@
-import { useState } from "react";
-import { assets, dashboardDummyData } from "../../assets/assets";
+import { useEffect, useState } from "react";
+import { assets } from "../../assets/assets";
 import Title from "../../components/common/Title";
+import { useAppStore } from "../../store/useAppStore";
+import { useAuth, useUser } from "@clerk/clerk-react";
+import API from "../../lib/axios";
+import toast from "react-hot-toast";
 
 const Dashboard = () => {
-  const [dashboardData, setDashboardData] = useState(dashboardDummyData);
+  const currency = useAppStore((state) => state.currency);
+
+  const { getToken } = useAuth();
+  const { isLoaded, user } = useUser();
+  const [dashboardData, setDashboardData] = useState({
+    bookings: [],
+    totalBookings: 0,
+    totalRevenue: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const token = await getToken();
+        const { data } = await API.get("/api/bookings/hotel", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (data.success) {
+          setDashboardData(data.dashboardData);
+        } else toast.error(data.message || "Failed to load dashboard data");
+      } catch (error) {
+        console.error("Dashboard fetch error:", error);
+        toast.error(
+          error?.response?.data?.message || "Error fetching dashboard data",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (isLoaded && user) {
+      fetchDashboardData();
+    }
+  }, [isLoaded, user, getToken]);
+  if (loading) {
+    return (
+      <div className="py-12 text-center text-gray-500 font-medium">
+        Loading dashboard data...
+      </div>
+    );
+  }
 
   return (
     <div>

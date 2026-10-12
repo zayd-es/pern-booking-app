@@ -1,8 +1,37 @@
+import { useState } from "react";
 import { assets, cities } from "../../../../assets/assets";
+import { useAppStore } from "../../../../store/useAppStore";
+import { useAuth } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
+import API from "../../../../lib/axios";
 
 export const SearchForm = () => {
+  const setSearchedCities = useAppStore((state) => state.setSearchedCities);
+  const { getToken } = useAuth();
+  const navigate = useNavigate();
+  const [destination, setDestination] = useState("");
+
+  const onSearch = async (e) => {
+    e.preventDefault();
+    navigate(`rooms?destination=${destination}`);
+    await API.post(
+      "/api/users/store-recent-search",
+      { recentSearchedCity: destination },
+      { headers: { Authorization: `Bearer ${await getToken()}` } },
+    );
+    setSearchedCities((prevSearchedCities) => {
+      const updateSearchedCities = [...prevSearchedCities, destination];
+      if (updateSearchedCities.length > 3) {
+        updateSearchedCities.shift();
+      }
+      return updateSearchedCities;
+    });
+  };
   return (
-    <form className="bg-white text-gray-500 rounded-lg px-6 py-4  mt-8 flex flex-col md:flex-row max-md:items-start gap-4 max-md:mx-auto">
+    <form
+      onSubmit={onSearch}
+      className="bg-white text-gray-500 rounded-lg px-6 py-4  mt-8 flex flex-col md:flex-row max-md:items-start gap-4 max-md:mx-auto"
+    >
       <div>
         <div className="flex items-center gap-2">
           <img src={assets.calenderIcon} alt="calendar" className="h-4" />
@@ -12,6 +41,8 @@ export const SearchForm = () => {
           list="destinations"
           id="destinationInput"
           type="text"
+          value={destination}
+          onChange={(e) => setDestination(e.target.value)}
           className=" rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none"
           placeholder="Type here"
           required
