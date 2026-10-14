@@ -25,7 +25,7 @@ const MyBooking = () => {
   const goToPage = async (pageToLoad) => {
     try {
       const { data } = await API.get("/api/bookings/user", {
-        params: { page: pageToLoad, limit: 2 }, // TEMP-TEST by claude: put back 10
+        params: { page: pageToLoad, limit: 10 },
         headers: { Authorization: `Bearer ${await getToken()}` },
       });
       if (data.success) {
@@ -41,7 +41,7 @@ const MyBooking = () => {
     const fetchFirstPage = async () => {
       try {
         const { data } = await API.get("/api/bookings/user", {
-          params: { page: 1, limit: 2 }, // TEMP-TEST by claude: put back 10
+          params: { page: 1, limit: 10 },
           headers: { Authorization: `Bearer ${await getToken()}` },
         });
         if (data.success) applyPage(data);

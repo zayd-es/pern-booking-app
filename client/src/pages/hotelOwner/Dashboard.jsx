@@ -32,7 +32,7 @@ const Dashboard = () => {
         setLoading(true);
         const token = await getToken();
         const { data } = await API.get("/api/bookings/hotel", {
-          params: { page: 1, limit: 2 }, // TEMP-TEST by claude: put back 10
+          params: { page: 1, limit: 10 },
           headers: { Authorization: `Bearer ${token}` },
         });
         if (data.success) {
@@ -59,7 +59,7 @@ const Dashboard = () => {
     setPageLoading(true);
     try {
       const { data } = await API.get("/api/bookings/hotel", {
-        params: { page: pageToLoad, limit: 2 }, // TEMP-TEST by claude: put back 10
+        params: { page: pageToLoad, limit: 10 },
         headers: { Authorization: `Bearer ${await getToken()}` },
       });
       if (data.success) {
