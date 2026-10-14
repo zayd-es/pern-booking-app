@@ -20,9 +20,12 @@ app.use(helmet());
 
 // by claude: only allow our own frontend(s). Set CLIENT_URL (comma separated) in the server env.
 // If it is not set we stay permissive so nothing breaks, but you should set it in production.
+// normalize each entry: trim spaces/quotes, drop a trailing "/", ignore case
+const normalizeOrigin = (o) =>
+  o.trim().replace(/^["']|["']$/g, "").replace(/\/+$/, "").toLowerCase();
 const allowedOrigins = (process.env.CLIENT_URL || "")
   .split(",")
-  .map((o) => o.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
 app.use(
   cors(
@@ -30,7 +33,7 @@ app.use(
       ? {
           origin: (origin, cb) =>
             !origin ||
-            allowedOrigins.includes(origin) ||
+            allowedOrigins.includes(normalizeOrigin(origin)) ||
             /^http:\/\/localhost:\d+$/.test(origin)
               ? cb(null, true)
               : cb(new Error("Not allowed by CORS")),
