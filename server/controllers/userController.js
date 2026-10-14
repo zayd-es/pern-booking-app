@@ -31,11 +31,9 @@ export const storeRecentSearchedCities = async (req, res) => {
       (city) => city.toLowerCase() !== recentSearchedCity.toLowerCase(),
     );
 
-    updatedCities.push(recentSearchedCity);
-
-    if (updatedCities.length > 3) {
-      updatedCities = updatedCities.slice(-3);
-    }
+    // by claude: newest search FIRST, keep only the last 4 cities
+    updatedCities.unshift(recentSearchedCity);
+    updatedCities = updatedCities.slice(0, 4);
 
     await prisma.user.update({
       where: { id: user.id },

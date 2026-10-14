@@ -7,8 +7,10 @@ import { useAppStore } from "../store/useAppStore";
 const Layout = () => {
   const { isLoaded, isSignedIn } = useUser();
   const isOwner = useAppStore((state) => state.isOwner);
+  const userLoaded = useAppStore((state) => state.userLoaded); // by claude
 
-  if (!isLoaded) {
+  // by claude: wait for the role before deciding to redirect (fixes refresh on /owner)
+  if (!isLoaded || (isSignedIn && !userLoaded)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>

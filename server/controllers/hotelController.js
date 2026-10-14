@@ -1,33 +1,51 @@
 import prisma from "../configs/prisma.js";
+import { z } from "zod";
+import cloudinary from "../configs/cloudinary.js";
+import { MOROCCAN_CITIES, COUNTRY } from "../configs/cities.js"; // by claude
+
+const hotelRegisterSchema = z.object({
+  name: z.string().min(3, "Hotel name must be at least 3 characters"),
+  address: z.string().min(5, "Address is too short"),
+  contact: z.string().min(5, "Contact number/email is required"),
+  // by claude: only Moroccan cities / Morocco are accepted
+  city: z.enum(MOROCCAN_CITIES, { error: "Please choose a Moroccan city" }),
+  country: z.literal(COUNTRY, { error: "Only Morocco is supported" }),
+});
 
 export const registerHotel = async (req, res) => {
   try {
-    const { name, address, contact, city } = req.body;
+    const validationResult = hotelRegisterSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: validationResult.error.issues[0].message,
+      });
+    }
+
+    const { name, address, contact, city, country } = validationResult.data;
     const userId = req.user.id;
 
-    if (!name || !address || !contact || !city) {
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields are required" });
-    }
-    const excistingHotel = await prisma.hotel.findFirst({
+    const existingHotel = await prisma.hotel.findFirst({
       where: { ownerId: userId },
     });
 
-    if (excistingHotel) {
+    if (existingHotel) {
       return res
         .status(409)
         .json({ success: false, message: "Hotel Already Registered" });
     }
+
     await prisma.hotel.create({
       data: {
         name,
         address,
         contact,
         city,
+        country,
         ownerId: userId,
       },
     });
+
     await prisma.user.update({
       where: { id: userId },
       data: { role: "hotelOwner" },
@@ -36,6 +54,119 @@ export const registerHotel = async (req, res) => {
     return res
       .status(201)
       .json({ success: true, message: "Hotel Registered Successfully" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getMyHotel = async (req, res) => {
+  try {
+    const hotel = await prisma.hotel.findFirst({
+      where: { ownerId: req.user.id },
+    });
+
+    if (!hotel) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No hotel found" });
+    }
+
+    return res.json({ success: true, hotel });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateMyHotel = async (req, res) => {
+  try {
+    const validationResult = hotelRegisterSchema.partial().safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: validationResult.error.issues[0].message,
+      });
+    }
+
+    if (Object.keys(validationResult.data).length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No fields to update" });
+    }
+
+    const hotel = await prisma.hotel.findFirst({
+      where: { ownerId: req.user.id },
+    });
+
+    if (!hotel) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No hotel found" });
+    }
+
+    const updatedHotel = await prisma.hotel.update({
+      where: { id: hotel.id },
+      data: validationResult.data,
+    });
+
+    return res.json({
+      success: true,
+      message: "Hotel updated successfully",
+      hotel: updatedHotel,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteMyHotel = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const hotel = await prisma.hotel.findFirst({
+      where: { ownerId: userId },
+      include: { rooms: { select: { images: true } } },
+    });
+
+    if (!hotel) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No hotel found" });
+    }
+
+    const activeBookings = await prisma.booking.count({
+      where: {
+        hotelId: hotel.id,
+        status: { in: ["PENDING", "CONFIRMED"] },
+        checkOutDate: { gte: new Date() },
+      },
+    });
+
+    if (activeBookings > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "You have active bookings. Cancel or complete them first.",
+      });
+    }
+
+    const images = hotel.rooms.flatMap((room) => room.images);
+    await Promise.all(
+      images.map(async (imgUrl) => {
+        try {
+          const publicId = imgUrl.split("/").pop().split(".")[0];
+          await cloudinary.uploader.destroy(publicId);
+        } catch (imgErr) {
+          console.error("Error deleting image from cloudinary:", imgErr);
+        }
+      }),
+    );
+
+    await prisma.$transaction([
+      prisma.booking.deleteMany({ where: { hotelId: hotel.id } }),
+      prisma.hotel.delete({ where: { id: hotel.id } }),
+      prisma.user.update({ where: { id: userId }, data: { role: "user" } }),
+    ]);
+
+    return res.json({ success: true, message: "Hotel deleted successfully" });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

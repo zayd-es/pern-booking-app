@@ -1,98 +1,112 @@
+// by claude: search bar redesigned (pill style); also skips the "recent search" call when logged out
 import { useState } from "react";
-import { assets, cities } from "../../../../assets/assets";
+import { cities } from "../../../../lib/cities";
+import { MapPin, Calendar, Users, Search } from "lucide-react"; // by claude
 import { useAppStore } from "../../../../store/useAppStore";
 import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import API from "../../../../lib/axios";
 
+const fieldClass = "flex-1 min-w-0 px-5 py-3 cursor-text";
+const labelClass =
+  "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500";
+const inputClass =
+  "w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-400 outline-none mt-1";
+
 export const SearchForm = () => {
   const setSearchedCities = useAppStore((state) => state.setSearchedCities);
-  const { getToken } = useAuth();
+  const searchedCities = useAppStore((state) => state.searchedCities); // by claude
+  const { getToken, isSignedIn } = useAuth();
   const navigate = useNavigate();
   const [destination, setDestination] = useState("");
 
   const onSearch = async (e) => {
     e.preventDefault();
-    navigate(`rooms?destination=${destination}`);
-    await API.post(
-      "/api/users/store-recent-search",
-      { recentSearchedCity: destination },
-      { headers: { Authorization: `Bearer ${await getToken()}` } },
-    );
-    setSearchedCities((prevSearchedCities) => {
-      const updateSearchedCities = [...prevSearchedCities, destination];
-      if (updateSearchedCities.length > 3) {
-        updateSearchedCities.shift();
-      }
-      return updateSearchedCities;
-    });
+    navigate(`/rooms?destination=${encodeURIComponent(destination)}`);
+
+    // by claude: only logged-in users have recent searches
+    if (!isSignedIn) return;
+
+    try {
+      await API.post(
+        "/api/users/store-recent-search",
+        { recentSearchedCity: destination },
+        { headers: { Authorization: `Bearer ${await getToken()}` } },
+      );
+      // by claude: the store setter takes an array, not an updater function
+      // by claude: same as the server: newest first, max 4 cities
+      const updated = [
+        destination,
+        ...searchedCities.filter(
+          (city) => city.toLowerCase() !== destination.toLowerCase(),
+        ),
+      ].slice(0, 4);
+      setSearchedCities(updated);
+    } catch (error) {
+      console.error("Failed to store recent search:", error);
+    }
   };
+
   return (
     <form
       onSubmit={onSearch}
-      className="bg-white text-gray-500 rounded-lg px-6 py-4  mt-8 flex flex-col md:flex-row max-md:items-start gap-4 max-md:mx-auto"
+      className="w-full max-w-5xl bg-white rounded-3xl lg:rounded-full border border-gray-200 shadow-xl shadow-gray-200/70 p-2 flex flex-col lg:flex-row lg:items-center divide-y lg:divide-y-0 lg:divide-x divide-gray-200"
     >
-      <div>
-        <div className="flex items-center gap-2">
-          <img src={assets.calenderIcon} alt="calendar" className="h-4" />
-          <label htmlFor="destinationInput">Destination</label>
-        </div>
+      <label htmlFor="destinationInput" className={fieldClass}>
+        <span className={labelClass}>
+          <MapPin className="h-3.5 w-3.5" />
+          Destination
+        </span>
         <input
           list="destinations"
           id="destinationInput"
           type="text"
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
-          className=" rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none"
-          placeholder="Type here"
+          className={inputClass}
+          placeholder="Where are you going?"
           required
         />
         <datalist id="destinations">
-          {cities.map((city, index) => (
-            <option value={city} id={index} />
+          {cities.map((city) => (
+            <option value={city} key={city} />
           ))}
         </datalist>
-      </div>
+      </label>
 
-      <div>
-        <div className="flex items-center gap-2">
-          <img src={assets.calenderIcon} alt="calendar" className="h-4" />
-          <label htmlFor="checkIn">Check in</label>
-        </div>
-        <input
-          id="checkIn"
-          type="date"
-          className=" rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none"
-        />
-      </div>
+      <label htmlFor="checkIn" className={fieldClass}>
+        <span className={labelClass}>
+          <Calendar className="h-3.5 w-3.5" />
+          Check in
+        </span>
+        <input id="checkIn" type="date" className={inputClass} />
+      </label>
 
-      <div>
-        <div className="flex items-center gap-2">
-          <img src={assets.calenderIcon} alt="calendar" className="h-4" />
+      <label htmlFor="checkOut" className={fieldClass}>
+        <span className={labelClass}>
+          <Calendar className="h-3.5 w-3.5" />
+          Check out
+        </span>
+        <input id="checkOut" type="date" className={inputClass} />
+      </label>
 
-          <label htmlFor="checkOut">Check out</label>
-        </div>
-        <input
-          id="checkOut"
-          type="date"
-          className=" rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none"
-        />
-      </div>
-
-      <div className="flex md:flex-col max-md:gap-2 max-md:items-center">
-        <label htmlFor="guests">Guests</label>
+      <label htmlFor="guests" className={`${fieldClass} lg:max-w-32`}>
+        <span className={labelClass}>
+          <Users className="h-3.5 w-3.5" />
+          Guests
+        </span>
         <input
           min={1}
           max={4}
           id="guests"
           type="number"
-          className=" rounded border border-gray-200 px-3 py-1.5 mt-1.5 text-sm outline-none  max-w-16"
-          placeholder="0"
+          className={inputClass}
+          placeholder="Add"
         />
-      </div>
+      </label>
 
-      <button className="flex items-center justify-center gap-1 rounded-md bg-black py-3 px-4 text-white my-auto cursor-pointer max-md:w-full max-md:py-1">
-        <img src={assets.searchIcon} alt="searchIcon" className="h-7" />
+      <button className="mt-2 lg:mt-0 lg:ml-2 flex items-center justify-center gap-2 rounded-full bg-gray-900 hover:bg-black active:scale-95 transition-all py-3.5 px-7 text-white text-sm font-medium cursor-pointer">
+        <Search className="h-5 w-5" />
         <span>Search</span>
       </button>
     </form>

@@ -1,124 +1,105 @@
-import { assets } from "../../assets/assets";
+// by claude: footer redesigned (minimal, top border, small uppercase headings)
+import Logo from "./Logo"; // by claude
+import { ArrowRight } from "lucide-react"; // by claude
+import { FaInstagram, FaFacebookF, FaXTwitter, FaLinkedinIn } from "react-icons/fa6"; // by claude (lucide has no brand icons)
+
+const headingClass =
+  "text-xs font-semibold uppercase tracking-wider text-gray-900";
+const linkClass = "hover:text-gray-900 transition-colors";
 
 const Footer = () => {
   return (
-    <div className="text-gray-500/80 pt-8 px-6 md:px-16 lg:px-24 xl:px-32">
-      <div className="flex flex-wrap justify-between gap-12 md:gap-6">
+    <footer className="border-t border-gray-200 text-gray-500 pt-12 px-6 md:px-16 lg:px-24 xl:px-32">
+      <div className="flex flex-wrap justify-between gap-10 md:gap-6">
         <div className="max-w-80">
-          <img
-            src={assets.logo}
-            alt="logo"
-            className="mb-4 h-8 md:h-9 invert  opacity-80"
-          />
+          <Logo className="mb-4" />
           <p className="text-sm">
             Discover the world's most extraordinary places to stay, from
-            boutique hotels to luxury villas and private islands
+            boutique hotels to luxury villas and private islands.
           </p>
-          <div className="flex items-center gap-3 mt-4">
-            {/* Instagram */}
-            <img
-              src={assets.instagramIcon}
-              alt="instagram-icon"
-              className="w-6"
-            />
-            <img
-              src={assets.facebookIcon}
-              alt="facebook-icon"
-              className="w-6"
-            />
-            <img src={assets.twitterIcon} alt="twitter-icon" className="w-6" />
-            <img
-              src={assets.linkendinIcon}
-              alt="linkden-icon"
-              className="w-6"
-            />
-            {/* Facebook */}
+          <div className="flex items-center gap-3 mt-5">
+            {[
+              [FaInstagram, "Instagram"],
+              [FaFacebookF, "Facebook"],
+              [FaXTwitter, "X"],
+              [FaLinkedinIn, "LinkedIn"],
+            ].map(([Icon, label]) => (
+              <Icon
+                key={label}
+                aria-label={label}
+                className="h-4.5 w-4.5 cursor-pointer text-gray-500 transition-colors hover:text-gray-900"
+              />
+            ))}
           </div>
         </div>
 
         <div>
-          <p className="font-playfair text-lg text-gray-800">COMPANY</p>
-          <ul className="mt-3 flex flex-col gap-2 text-sm">
-            <li>
-              <a href="#">About</a>
-            </li>
-            <li>
-              <a href="#">Careers</a>
-            </li>
-            <li>
-              <a href="#">Press</a>
-            </li>
-            <li>
-              <a href="#">Blog</a>
-            </li>
-            <li>
-              <a href="#">Partners</a>
-            </li>
+          <p className={headingClass}>Company</p>
+          <ul className="mt-4 flex flex-col gap-2.5 text-sm">
+            {["About", "Careers", "Press", "Blog", "Partners"].map((item) => (
+              <li key={item}>
+                <a href="#" className={linkClass}>
+                  {item}
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
 
         <div>
-          <p className="font-playfair text-lg text-gray-800">SUPPORT</p>
-          <ul className="mt-3 flex flex-col gap-2 text-sm">
-            <li>
-              <a href="#">Help Center</a>
-            </li>
-            <li>
-              <a href="#">Safety Information</a>
-            </li>
-            <li>
-              <a href="#">Cancellation Options</a>
-            </li>
-            <li>
-              <a href="#">Contact Us</a>
-            </li>
-            <li>
-              <a href="#">Accessibility</a>
-            </li>
+          <p className={headingClass}>Support</p>
+          <ul className="mt-4 flex flex-col gap-2.5 text-sm">
+            {[
+              "Help Center",
+              "Safety Information",
+              "Cancellation Options",
+              "Contact Us",
+              "Accessibility",
+            ].map((item) => (
+              <li key={item}>
+                <a href="#" className={linkClass}>
+                  {item}
+                </a>
+              </li>
+            ))}
           </ul>
         </div>
 
         <div className="max-w-80">
-          <p className=" font-playfair text-lg text-gray-800">STAY UPDATED</p>
-          <p className="mt-3 text-sm">
+          <p className={headingClass}>Stay updated</p>
+          <p className="mt-4 text-sm">
             Subscribe to our newsletter for inspiration and special offers.
           </p>
-          <div className="flex items-center mt-4">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className="flex items-center mt-4"
+          >
             <input
-              type="text"
-              className="bg-white rounded-l border border-gray-300 h-9 px-3 outline-none"
+              type="email"
+              className="bg-white rounded-l-full border border-gray-300 h-10 px-4 text-sm outline-none focus:border-gray-900 transition-colors"
               placeholder="Your email"
+              required
             />
-            <button className="flex items-center justify-center bg-black h-9 w-9 aspect-square rounded-r">
-              {/* Arrow icon */}
-              <img
-                src={assets.arrowIcon}
-                alt="arrow-icon"
-                className="w-3.5 invert"
-              />
+            <button className="flex items-center justify-center bg-gray-900 hover:bg-black h-10 w-11 rounded-r-full cursor-pointer transition-colors">
+              <ArrowRight className="h-4 w-4 text-white" />
             </button>
-          </div>
+          </form>
         </div>
       </div>
-      <hr className="border-gray-300 mt-8" />
-      <div className="flex flex-col md:flex-row gap-2 items-center justify-between py-5">
-        <p>
-          © {new Date().getFullYear()} <a href="https://prebuiltui.com">Zayd</a>
-          . All rights reserved.
-        </p>
-        <ul className="flex items-center gap-4">
-          <li>
-            <a href="#">Privacy</a>
-          </li>
-          <li>
-            <a href="#">Terms</a>
-          </li>
-          <li>
-            <a href="#">Sitemap</a>
-          </li>
+
+      <div className="flex flex-col md:flex-row gap-2 items-center justify-between border-t border-gray-200 mt-10 py-6 text-sm">
+        <p>© {new Date().getFullYear()} Zayd. All rights reserved.</p>
+        <ul className="flex items-center gap-5">
+          {["Privacy", "Terms", "Sitemap"].map((item) => (
+            <li key={item}>
+              <a href="#" className={linkClass}>
+                {item}
+              </a>
+            </li>
+          ))}
         </ul>
       </div>
-    </div>
+    </footer>
   );
 };
 

@@ -8,6 +8,7 @@ import HotelReg from "./components/common/HotelReg";
 import Dashboard from "./pages/hotelOwner/Dashboard";
 import AddRoom from "./pages/hotelOwner/AddRoom";
 import ListRoom from "./pages/hotelOwner/ListRoom";
+import MyHotel from "./pages/hotelOwner/MyHotel"; // by claude
 import Layout from "./layouts/HotelOwnerLayout";
 import { Toaster } from "react-hot-toast";
 import { useAppStore } from "./store/useAppStore";
@@ -23,6 +24,7 @@ const App = () => {
   const { getToken } = useAuth();
 
   const fetchUser = useAppStore((state) => state.fetchUser);
+  const resetUser = useAppStore((state) => state.resetUser); // by claude
   useEffect(() => {
     fetchRooms();
   }, [fetchRooms]);
@@ -30,7 +32,11 @@ const App = () => {
     if (isLoaded && user) {
       fetchUser(getToken);
     }
-  }, [isLoaded, user, getToken, fetchUser]);
+    // by claude: logged out -> forget the owner role
+    if (isLoaded && !user) {
+      resetUser();
+    }
+  }, [isLoaded, user, getToken, fetchUser, resetUser]);
   return (
     <div>
       <Toaster />
@@ -49,6 +55,8 @@ const App = () => {
           <Route index element={<Dashboard />} />
           <Route path="add-room" element={<AddRoom />} />
           <Route path="list-room" element={<ListRoom />} />
+          {/* by claude */}
+          <Route path="my-hotel" element={<MyHotel />} />
         </Route>
       </Routes>
     </div>

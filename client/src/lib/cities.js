@@ -1,0 +1,21 @@
+// by claude: allowed cities (Morocco only). Keep in sync with server/configs/cities.js
+export const cities = [
+  "Casablanca",
+  "Marrakech",
+  "Rabat",
+  "Tangier",
+  "Fes",
+  "Agadir",
+  "Essaouira",
+  "Meknes",
+  "Tetouan",
+  "Chefchaouen",
+  "Ouarzazate",
+  "Merzouga",
+  "Dakhla",
+  "El Jadida",
+  "Oujda",
+  "Kenitra",
+  "Ifrane",
+  "Al Hoceima",
+];

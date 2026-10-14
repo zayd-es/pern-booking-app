@@ -12,6 +12,7 @@ export const RadioButton = ({
         onChange={() => {
           onChange(label);
         }}
+        className="accent-gray-900" // by claude
       />
       <span className="font-light select-none">{label}</span>
     </label>
@@ -25,6 +26,7 @@ export const CheckBox = ({ label, selected = false, onChange = () => {} }) => {
         type="checkbox"
         checked={selected}
         onChange={(e) => onChange(e.target.checked, label)}
+        className="accent-gray-900" // by claude
       />
       <span className="font-light select-none">{label}</span>
     </label>
@@ -45,9 +47,9 @@ const FilterSidebar = ({
   currency,
 }) => {
   return (
-    <div className="bg-white w-80 border border-gray-300 text-gray-600 max-lg:mb-8 min-lg:mt-16 rounded-xl overflow-hidden">
+    <div className="bg-white w-80 border border-gray-200 text-gray-600 max-lg:mb-8 min-lg:mt-16 rounded-2xl overflow-hidden">
       <div
-        className={`flex items-center justify-between px-5 py-2.5 min-lg:border-b border-gray-300 ${
+        className={`flex items-center justify-between px-5 py-2.5 min-lg:border-b border-gray-200 ${
           openFilters ? "border-b" : ""
         }`}
       >

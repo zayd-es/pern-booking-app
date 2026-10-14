@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import Title from "../components/common/Title";
-import { assets } from "../assets/assets";
+import { MapPin, Users } from "lucide-react"; // by claude
 import { useAuth } from "@clerk/clerk-react";
 import API from "../lib/axios";
 import toast from "react-hot-toast";
+import FadeIn from "../components/common/FadeIn"; // by claude
 
 const MyBooking = () => {
   const { userId, getToken } = useAuth();
@@ -46,96 +47,114 @@ const MyBooking = () => {
       toast.error(error.message);
     }
   };
+  // by claude: cancel an unpaid booking
+  const handleCancel = async (bookingId) => {
+    if (!window.confirm("Cancel this booking?")) return;
+    try {
+      const { data } = await API.patch(
+        `/api/bookings/${bookingId}/cancel`,
+        {},
+        { headers: { Authorization: `Bearer ${await getToken()}` } },
+      );
+      if (data.success) {
+        toast.success(data.message);
+        setBookings((prev) =>
+          prev.map((b) =>
+            b.id === bookingId ? { ...b, status: "CANCELLED" } : b,
+          ),
+        );
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message);
+    }
+  };
+
+  // by claude: redesigned (minimal cards instead of table)
+  const statusStyle = {
+    CONFIRMED: { label: "Paid", cls: "bg-green-50 text-green-700" },
+    CANCELLED: { label: "Cancelled", cls: "bg-red-50 text-red-600" },
+    PENDING: { label: "Pending", cls: "bg-amber-50 text-amber-700" },
+  };
+
   return (
     <div className="py-28 md:pb-35 md:pt-32 px-4 md:px-16 lg:px-24 xl:px-32">
       <Title
         title="My Bookings"
-        subTitle="Easily view and manage all your upcoming hotel reservations in one place. Plan your trips seamlessly with just a few clicks"
+        subTitle="View and manage all your hotel reservations in one place."
         align="left"
       />
 
-      <div className="max-w-6xl mt-8 w-full text-gray-800">
-        <div className="hidden md:grid md:grid-cols-[3fr_2fr_1fr] w-full border-b border-gray-300 font-medium text-base py-3">
-          <div className="w-1/3">Hotels</div>
-          <div className="w-1/3">Date & Timings</div>
-          <div className="w-1/3">Payment</div>
-        </div>
+      <div className="mt-8 grid max-w-5xl gap-4">
+        {bookings.length === 0 && (
+          <p className="py-10 text-gray-500">You have no bookings yet.</p>
+        )}
 
-        {bookings.map((booking) => (
-          <div
-            key={booking._id}
-            className="grid grid-cols-1 md:grid-cols-[3fr_2fr_1fr] border-b border-gray-300 py-6 items-center"
-          >
-            <div className="flex flex-col md:flex-row">
+        {bookings.map((booking, i) => {
+          const st = statusStyle[booking.status] || statusStyle.PENDING;
+          return (
+            <FadeIn
+              key={booking.id}
+              delay={i * 0.06}
+              className="flex flex-col gap-4 rounded-2xl border border-gray-200 p-4 md:flex-row md:items-center"
+            >
               <img
                 src={booking.room.images[0]}
                 alt="hotel-img"
-                className="min-md:w-44 rounded shadow object-cover"
+                className="aspect-4/3 w-full rounded-xl object-cover md:w-48"
               />
-              <div className="flex flex-col gap-1.5 max-md:mt-3 min-md:ml-4">
-                <p className="font-playfair text-2xl">
+
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-lg font-medium text-gray-900">
                   {booking.hotel.name}{" "}
-                  <span className="font-inter text-sm">
+                  <span className="text-sm font-normal text-gray-500">
                     ({booking.room.roomType})
                   </span>
                 </p>
-                <div className="flex items-center gap-1 text-sm text-gray-500">
-                  <img src={assets.locationIcon} alt="location-icon" />
-                  <span>{booking.hotel.address}</span>
-                </div>
-                <div className="flex items-center gap-1 text-sm text-gray-500">
-                  <img src={assets.guestsIcon} alt="guests-icon" />
-                  <span>Guests: {booking.guests}</span>
-                </div>
-                <p className="text-base">Total: ${booking.totalPrice}</p>
-              </div>
-            </div>
-
-            <div className="flex flex-row md:items-center md:gap-12 mt-3 gap-8">
-              <div>
-                <p>Check-In:</p>
-                <p className="text-gray-500 text-sm">
-                  {new Date(booking.checkInDate).toDateString()}
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span className="truncate">{booking.hotel.address}</span>
                 </p>
-              </div>
-              <div>
-                <p>Check-Out:</p>
-                <p className="text-gray-500 text-sm">
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+                  <Users className="h-3.5 w-3.5" />
+                  Guests: {booking.guests}
+                </p>
+                <p className="mt-2 text-sm text-gray-500">
+                  {new Date(booking.checkInDate).toDateString()} →{" "}
                   {new Date(booking.checkOutDate).toDateString()}
                 </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-start justify-center pt-3">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`h-3 w-3 rounded-full ${
-                    booking.status === "CONFIRMED"
-                      ? "bg-green-500"
-                      : "bg-yellow-500"
-                  }`}
-                ></div>
-                <p
-                  className={`text-sm ${
-                    booking.status === "CONFIRMED"
-                      ? "text-green-500"
-                      : "text-yellow-500"
-                  }`}
-                >
-                  {booking.status === "CONFIRMED" ? "Paid" : "Pending"}
+                <p className="mt-1 font-semibold text-gray-900">
+                  Total: ${booking.totalPrice}
                 </p>
               </div>
-              {booking.status !== "CONFIRMED" && (
-                <button
-                  onClick={() => handlePayment(booking.id)}
-                  className="px-4 py-1.5 mt-4 text-xs border border-gray-400 rounded-full hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  Pay Now
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+
+              <div className="flex flex-col items-start gap-3 md:items-end">
+                <span className={`rounded-full px-3 py-1 text-xs font-medium ${st.cls}`}>
+                  {st.label}
+                </span>
+                {/* by claude: no pay/cancel once the stay is over */}
+                {booking.status === "PENDING" &&
+                  new Date(booking.checkOutDate) >= new Date() && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePayment(booking.id)}
+                        className="cursor-pointer rounded-full bg-gray-900 px-4 py-1.5 text-xs text-white transition-all hover:bg-gray-700"
+                      >
+                        Pay Now
+                      </button>
+                      <button
+                        onClick={() => handleCancel(booking.id)}
+                        className="cursor-pointer rounded-full border border-red-300 px-4 py-1.5 text-xs text-red-600 transition-all hover:bg-red-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+              </div>
+            </FadeIn>
+          );
+        })}
       </div>
     </div>
   );

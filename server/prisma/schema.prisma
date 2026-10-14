@@ -30,6 +30,7 @@ model Hotel {
   address   String
   contact   String
   city      String
+  country   String   @default("Morocco")
   
   ownerId   String
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -46,8 +47,9 @@ model Room {
   hotel         Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
   roomType      String
+  description   String?
   pricePerNight Float
-  amenities     String[]  
+amenities     String[]  @default([])
   images        String[]
   isAvailable   Boolean  @default(true)
 

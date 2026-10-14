@@ -1,33 +1,34 @@
-import { assets } from "../../../assets/assets";
+// by claude: redesigned (light card, black button), fixed class -> className
 import Title from "../../common/Title";
 
 const NewsLetter = () => {
   return (
-    <div class="flex flex-col items-center max-w-5xl lg:w-full rounded-2xl px-4 py-12 md:py-16 mx-2 lg:mx-auto my-30 bg-gray-900 text-white">
-      <Title
-        title="Stay Inspired"
-        subTitle="Join our newsletter and be the first to discover new destinations, exclusive offers, and travel inspiration."
-      />
-      <div class="flex flex-col md:flex-row items-center justify-center gap-4 mt-6">
-        <input
-          type="text"
-          class="bg-white/10 px-4 py-2.5 border border-white/20 rounded outline-none max-w-66 w-full"
-          placeholder="Enter your email"
+    <section className="px-6 md:px-16 lg:px-24 xl:px-32 py-16 md:py-20">
+      <div className="flex flex-col items-center rounded-3xl border border-gray-200 bg-gray-50 px-4 py-12 md:py-16">
+        <Title
+          title="Stay inspired"
+          subTitle="Join our newsletter and be the first to discover new destinations and exclusive offers."
         />
-        <button class="flex items-center justify-center gap-2 group bg-black px-4 md:px-7 py-2.5 rounded active:scale-95 transition-all">
-          Subscribe
-          <img
-            src={assets.arrowIcon}
-            alt="arrow-icon"
-            className="w-3.5 invert group-hover:translate-x-1 transition-all"
+        <form
+          onSubmit={(e) => e.preventDefault()}
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 w-full max-w-md"
+        >
+          <input
+            type="email"
+            className="w-full bg-white px-4 py-3 border border-gray-300 rounded-full text-sm outline-none focus:border-gray-900 transition-colors"
+            placeholder="Enter your email"
+            required
           />
-        </button>
+          <button className="w-full sm:w-auto shrink-0 bg-gray-900 hover:bg-black text-white text-sm font-medium px-7 py-3 rounded-full active:scale-95 transition-all cursor-pointer">
+            Subscribe
+          </button>
+        </form>
+        <p className="text-gray-500 mt-5 text-xs text-center">
+          By subscribing, you agree to our Privacy Policy and consent to receive
+          updates.
+        </p>
       </div>
-      <p class="text-gray-500 mt-6 text-xs text-center">
-        By subscribing, you agree to our Privacy Policy and consent to receive
-        updates.
-      </p>
-    </div>
+    </section>
   );
 };
 

@@ -1,38 +1,38 @@
+// by claude: section redesigned (same grid as featured), fixed key (_id -> id)
 import Title from "../../common/Title";
 import { useAppStore } from "../../../store/useAppStore";
-import { useMemo } from "react";
+import { useRecommendedHotels } from "../../../lib/useHotels"; // by claude
 import HotelCard from "../../common/HotelCard";
+import HotelCardSkeleton from "../../common/HotelCardSkeleton"; // by claude
 
 const RecommendedHotels = () => {
   const searchedCities = useAppStore((state) => state.searchedCities);
-  const rooms = useAppStore((state) => state.rooms);
+  const roomsLoading = useAppStore((state) => state.roomsLoading); // by claude
 
-  const recommendedHotels = useMemo(() => {
-    if (
-      !searchedCities ||
-      !Array.isArray(searchedCities) ||
-      searchedCities.length === 0
-    ) {
-      return [];
-    }
-    return rooms.filter((room) => searchedCities.includes(room.hotel?.city));
-  }, [rooms, searchedCities]);
+  const recommendedHotels = useRecommendedHotels(); // by claude
 
-  if (recommendedHotels.length === 0) return null;
+  // by claude: while loading, show skeletons only if the user has searched cities
+  const showSkeleton = roomsLoading && searchedCities?.length > 0;
+  if (!showSkeleton && recommendedHotels.length === 0) return null;
 
   return (
-    <div className="flex flex-col items-center px-6 md:px-16 lg:px-24 bg-slate-50 py-16 md:py-20">
+    <section className="px-6 md:px-16 lg:px-24 xl:px-32 bg-gray-50 py-16 md:py-20">
       <Title
-        title="Recommended Hotels"
-        subTitle="Discover our handpicked selection of exceptional properties around the world, offering unparalleled luxury and unforgettable experiences."
+        align="left"
+        title="Recommended for you"
+        subTitle="Hotels in the cities you searched for recently."
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl mt-12 md:mt-16 justify-items-center">
-        {recommendedHotels.slice(0, 4).map((room, index) => (
-          <HotelCard key={room._id} room={room} index={index} />
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10 mt-10">
+        {showSkeleton
+          ? Array.from({ length: 4 }, (_, i) => <HotelCardSkeleton key={i} />)
+          : recommendedHotels
+              .slice(0, 4)
+              .map((hotel, index) => (
+                <HotelCard key={hotel.id} hotel={hotel} index={index} />
+              ))}
       </div>
-    </div>
+    </section>
   );
 };
 

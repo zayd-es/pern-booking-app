@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { assets } from "../../assets/assets";
+import { CalendarCheck, Wallet, TrendingUp } from "lucide-react"; // by claude
 import Title from "../../components/common/Title";
 import { useAppStore } from "../../store/useAppStore";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import API from "../../lib/axios";
 import toast from "react-hot-toast";
 
+// by claude: minimal restyle (neutral stat cards, rounded table)
 const Dashboard = () => {
   const currency = useAppStore((state) => state.currency);
 
@@ -14,6 +15,8 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     bookings: [],
     totalBookings: 0,
+    confirmedBookings: 0,
+    confirmedRevenue: 0,
     totalRevenue: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -42,10 +45,43 @@ const Dashboard = () => {
       fetchDashboardData();
     }
   }, [isLoaded, user, getToken]);
+
+  // by claude: cancel a booking and update the stats locally
+  const handleCancel = async (booking) => {
+    if (!window.confirm("Cancel this booking?")) return;
+    try {
+      const token = await getToken();
+      const { data } = await API.patch(
+        `/api/bookings/${booking.id}/cancel`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (data.success) {
+        toast.success(data.message);
+        const wasConfirmed = booking.status === "CONFIRMED";
+        setDashboardData((prev) => ({
+          ...prev,
+          bookings: prev.bookings.map((b) =>
+            b.id === booking.id ? { ...b, status: "CANCELLED" } : b,
+          ),
+          totalRevenue: prev.totalRevenue - booking.totalPrice,
+          confirmedBookings: prev.confirmedBookings - (wasConfirmed ? 1 : 0),
+          confirmedRevenue:
+            prev.confirmedRevenue - (wasConfirmed ? booking.totalPrice : 0),
+        }));
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to cancel booking");
+    }
+  };
+
   if (loading) {
     return (
-      <div className="py-12 text-center text-gray-500 font-medium">
-        Loading dashboard data...
+      <div className="flex items-center justify-center py-24 text-gray-500 gap-2">
+        <span className="h-5 w-5 rounded-full border-2 border-gray-900 border-t-transparent animate-spin" />
+        <span className="text-sm font-semibold">Loading dashboard data...</span>
       </div>
     );
   }
@@ -56,50 +92,56 @@ const Dashboard = () => {
         align="left"
         font="outfit"
         title="Dashboard"
-        subTitle="Monitor your room listings, track bookings and analyze revenue–all in one place. Stay updated with real-time insights to ensure smooth operations."
+        subTitle="Monitor your room listings, track bookings and analyze revenue–all in one place."
       />
 
-      <div className="flex gap-4 my-8">
-        {/* ----- Total Bookings ----- */}
-        <div className="bg-primary/3 border border-primary/10 rounded flex p-4 pr-8">
-          <img
-            src={assets.totalBookingIcon}
-            alt=""
-            className="max-sm:hidden h-10"
-          />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-8">
+        {/* ----- Box 1: Total Bookings ----- */}
+        <div className="border border-gray-200 rounded-2xl flex p-5 items-center">
+          <CalendarCheck className="max-sm:hidden h-9 w-9 text-gray-400" />
           <div className="flex flex-col sm:ml-4 font-medium">
-            <p className="text-blue-500 text-lg">Total Bookings</p>
-            <p className="text-neutral-400 text-base">
-              {dashboardData?.bookings?.length || 0}
+            <p className="text-gray-500 text-sm">Total Bookings</p>
+            <p className="text-neutral-700 text-xl font-bold">
+              {dashboardData?.totalBookings || 0}
             </p>
           </div>
         </div>
 
-        {/* ----- Total Revenue ----- */}
-        <div className="bg-primary/3 border border-primary/10 rounded flex p-4 pr-8">
-          <img
-            src={assets.totalRevenueIcon}
-            alt=""
-            className="max-sm:hidden h-10"
-          />
+        {/* ----- Box 2: Confirmed / Paid Only (Length + Revenue) ----- */}
+        <div className="border border-gray-200 rounded-2xl flex p-5 items-center">
+          <Wallet className="max-sm:hidden h-9 w-9 text-gray-400" />
           <div className="flex flex-col sm:ml-4 font-medium">
-            <p className="text-blue-500 text-lg">Total Revenue</p>
-            <p className="text-neutral-400 text-base">
-              $ {dashboardData.totalRevenue}
+            <p className="text-gray-500 text-sm">Paid / Confirmed</p>
+            <p className="text-neutral-900 text-xl font-bold">
+              {currency} {dashboardData?.confirmedRevenue || 0}
+            </p>
+            <span className="text-xs font-semibold text-green-600 mt-0.5">
+              {dashboardData?.confirmedBookings || 0} Confirmed Bookings
+            </span>
+          </div>
+        </div>
+
+        {/* ----- Box 3: Total Potential Revenue ----- */}
+        <div className="border border-gray-200 rounded-2xl flex p-5 items-center">
+          <TrendingUp className="max-sm:hidden h-9 w-9 text-gray-400" />
+          <div className="flex flex-col sm:ml-4 font-medium">
+            <p className="text-gray-500 text-sm">Total Potential Revenue</p>
+            <p className="text-neutral-700 text-xl font-bold">
+              {currency} {dashboardData?.totalRevenue || 0}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ------ Recent Bookings ------- */}
+      {/* ------ Recent Bookings Table ------- */}
       <div>
-        <h2 className="text-xl text-blue-950/70 font-medium mb-5">
+        <h2 className="text-xl text-gray-900 font-medium mb-5">
           Recent Bookings
         </h2>
 
-        <div className="w-full max-w-3xl text-left border border-gray-300 rounded-lg max-h-80 overflow-y-scroll">
+        <div className="w-full max-w-4xl text-left border border-gray-200 rounded-2xl max-h-80 overflow-y-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="py-3 px-4 text-gray-800 font-medium">
                   User Name
@@ -113,29 +155,70 @@ const Dashboard = () => {
                 <th className="py-3 px-4 text-gray-800 font-medium text-center">
                   Payment Status
                 </th>
+                {/* by claude */}
+                <th className="py-3 px-4 text-gray-800 font-medium text-center">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody className="text-sm">
-              {dashboardData.bookings.map((item, index) => (
-                <tr key={index}>
-                  <td className="py-3 px-4 text-gray-700 border-t border-gray-300">
-                    {item.user.username}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700 border-t border-gray-300 max-sm:hidden">
-                    {item.room.roomType}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700 border-t border-gray-300 text-center">
-                    $ {item.totalPrice}
-                  </td>
-                  <td className="py-3 px-4 border-t border-gray-300 flex">
-                    <button
-                      className={`py-1 px-3 text-xs rounded-full mx-auto ${item.isPaid ? "bg-green-200 text-green-600" : "bg-amber-200 text-yellow-600"}`}
-                    >
-                      {item.isPaid ? "Completed" : "Pending"}
-                    </button>
+              {dashboardData?.bookings?.length > 0 ? (
+                dashboardData.bookings.map((item, index) => {
+                  const statusUpper = String(item.status || "").toUpperCase();
+                  const isConfirmed =
+                    statusUpper === "CONFIRMED" || statusUpper === "PAID";
+
+                  return (
+                    <tr key={item.id || index}>
+                      <td className="py-3 px-4 text-gray-700 border-t border-gray-200 font-medium">
+                        {item.user?.username || "Guest User"}
+                      </td>
+                      <td className="py-3 px-4 text-gray-700 border-t border-gray-200 max-sm:hidden">
+                        {item.room?.roomType || "N/A"}
+                      </td>
+                      <td className="py-3 px-4 text-gray-700 border-t border-gray-200 text-center font-bold">
+                        {currency} {item.totalPrice}
+                      </td>
+                      <td className="py-3 px-4 border-t border-gray-200 text-center">
+                        <span
+                          className={`inline-block py-1 px-3 text-xs font-semibold rounded-full ${
+                            isConfirmed
+                              ? "bg-green-100 text-green-700"
+                              : statusUpper === "PENDING"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                      {/* by claude */}
+                      <td className="py-3 px-4 border-t border-gray-200 text-center">
+                        {statusUpper !== "CANCELLED" &&
+                        new Date(item.checkOutDate) >= new Date() ? (
+                          <button
+                            onClick={() => handleCancel(item)}
+                            className="text-red-600 hover:text-red-800 text-xs font-bold px-3 py-1.5 rounded bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="text-center py-8 text-gray-500 border-t font-medium"
+                  >
+                    No bookings found.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

@@ -11,8 +11,9 @@ export const checkAvailability = async ({
       where: {
         roomId,
         status: { not: "CANCELLED" },
-        checkInDate: { lte: new Date(checkOutDate) },
-        checkOutDate: { gte: new Date(checkInDate) },
+        // by claude: strict < / > so check-out day = next guest's check-in day is allowed
+        checkInDate: { lt: new Date(checkOutDate) },
+        checkOutDate: { gt: new Date(checkInDate) },
       },
     });
     return !excistingBooking;
@@ -47,18 +48,7 @@ export const createBooking = async (req, res) => {
     const { checkInDate, checkOutDate, roomId, guests } = req.body;
     const userId = req.user.id;
 
-    const isAvailable = await checkAvailability({
-      checkInDate,
-      checkOutDate,
-      roomId,
-    });
-    if (!isAvailable) {
-      return res.status(400).json({
-        success: false,
-        message: "Room is not available for these dates",
-      });
-    }
-
+    // by claude: validate room, dates and guests first
     const roomData = await prisma.room.findUnique({
       where: { id: roomId },
       include: { hotel: true },
@@ -69,9 +59,30 @@ export const createBooking = async (req, res) => {
         message: "Room not found",
       });
     }
+    if (!roomData.isAvailable) {
+      return res.status(400).json({
+        success: false,
+        message: "This room is currently not available for booking",
+      });
+    }
 
     const checkIn = new Date(checkInDate);
     const checkOut = new Date(checkOutDate);
+    if (Number.isNaN(checkIn.getTime()) || Number.isNaN(checkOut.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid dates",
+      });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (checkIn < today) {
+      return res.status(400).json({
+        success: false,
+        message: "Check-in date can't be in the past",
+      });
+    }
 
     const timeDiff = checkOut.getTime() - checkIn.getTime();
     const nights = Math.ceil(timeDiff / (1000 * 3600 * 24));
@@ -83,19 +94,64 @@ export const createBooking = async (req, res) => {
       });
     }
 
+    const guestsCount = Number(guests);
+    if (!Number.isInteger(guestsCount) || guestsCount < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Guests must be a valid number",
+      });
+    }
+
     const totalPrice = roomData.pricePerNight * nights;
 
-    const booking = await prisma.booking.create({
-      data: {
-        userId,
-        roomId,
-        hotelId: roomData.hotelId,
-        checkInDate: checkIn,
-        checkOutDate: checkOut,
-        totalPrice,
-        guests: Number(guests),
-      },
-    });
+    // by claude: availability check + create in ONE serializable transaction
+    // (two users can't book the same dates at the same time anymore)
+    let booking;
+    try {
+      booking = await prisma.$transaction(
+        async (tx) => {
+          // by claude: query directly (checkAvailability swallows errors, we need P2034 to bubble up)
+          const overlap = await tx.booking.findFirst({
+            where: {
+              roomId,
+              status: { not: "CANCELLED" },
+              // by claude: strict < / > (same-day turnover allowed)
+              checkInDate: { lt: checkOut },
+              checkOutDate: { gt: checkIn },
+            },
+          });
+          if (overlap) return null;
+          return tx.booking.create({
+            data: {
+              userId,
+              roomId,
+              hotelId: roomData.hotelId,
+              checkInDate: checkIn,
+              checkOutDate: checkOut,
+              totalPrice,
+              guests: guestsCount,
+            },
+          });
+        },
+        { isolationLevel: "Serializable" },
+      );
+    } catch (txError) {
+      // P2034 = write conflict / deadlock between concurrent bookings
+      if (txError.code === "P2034") {
+        return res.status(409).json({
+          success: false,
+          message: "Someone just booked this room, please try again",
+        });
+      }
+      throw txError;
+    }
+
+    if (!booking) {
+      return res.status(400).json({
+        success: false,
+        message: "Room is not available for these dates",
+      });
+    }
 
     const toEmail =
       req.user?.email ||
@@ -205,16 +261,34 @@ export const getHotelBooking = async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    const totalBokings = bookings.length;
-    const totalRevenue = bookings.reduce(
-      (acc, booking) => acc + booking.totalPrice,
+    const totalBookings = bookings.length;
+
+    const confirmedBookingsList = bookings.filter((b) => {
+      const status = String(b.status || "").toUpperCase();
+      return status === "CONFIRMED";
+    });
+
+    const confirmedBookings = confirmedBookingsList.length;
+
+    const confirmedRevenue = confirmedBookingsList.reduce(
+      (acc, booking) => acc + (booking.totalPrice || 0),
+      0,
+    );
+
+    // by claude: cancelled bookings don't count in potential revenue
+    const totalRevenue = bookings
+      .filter((b) => b.status !== "CANCELLED")
+      .reduce(
+      (acc, booking) => acc + (booking.totalPrice || 0),
       0,
     );
 
     res.status(200).json({
       success: true,
       dashboardData: {
-        totalBokings,
+        totalBookings,
+        confirmedBookings,
+        confirmedRevenue,
         totalRevenue,
         bookings,
       },
@@ -224,6 +298,73 @@ export const getHotelBooking = async (req, res) => {
       success: false,
       message: error.message || "Failed to fetch hotel bookings",
     });
+  }
+};
+
+// by claude: cancel a booking (guest: only unpaid ones, hotel owner: any active one)
+export const cancelBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { hotel: { select: { ownerId: true } } },
+    });
+
+    if (!booking) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    }
+
+    const isGuest = booking.userId === userId;
+    const isHotelOwner = booking.hotel.ownerId === userId;
+
+    if (!isGuest && !isHotelOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to cancel this booking",
+      });
+    }
+
+    if (booking.status === "CANCELLED") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is already cancelled" });
+    }
+
+    if (new Date(booking.checkOutDate) < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "This booking is already completed",
+      });
+    }
+
+    // by claude: no automatic refund yet, so a guest can't cancel a paid booking
+    if (!isHotelOwner && booking.status === "CONFIRMED") {
+      return res.status(400).json({
+        success: false,
+        message: "This booking is already paid. Please contact the hotel.",
+      });
+    }
+
+    await prisma.booking.update({
+      where: { id },
+      data: { status: "CANCELLED" },
+    });
+
+    const needsRefund =
+      booking.status === "CONFIRMED" && booking.paymentMethod === "Stripe";
+
+    return res.json({
+      success: true,
+      message: needsRefund
+        ? "Booking cancelled. Remember to refund the guest from your Stripe dashboard."
+        : "Booking cancelled successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -243,6 +384,19 @@ export const stripePayment = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Booking not found" });
+    }
+    // by claude: only the guest who made the booking can pay, and only if still pending
+    if (booking.userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to pay for this booking",
+      });
+    }
+    if (booking.status !== "PENDING") {
+      return res.status(400).json({
+        success: false,
+        message: "This booking can't be paid",
+      });
     }
     const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
     const line_items = [
