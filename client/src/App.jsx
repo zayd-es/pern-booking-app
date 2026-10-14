@@ -1,4 +1,5 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
+import NotFound from "./pages/NotFound"; // by claude
 import MainLayout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import RoomDetails from "./pages/RoomDetails";
@@ -18,6 +19,15 @@ import { useEffect } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import AllRooms from "./pages/allRooms/AllRooms";
 import Loader from "./components/common/Loader";
+
+// by claude: always start a new page at the top
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
 
 const App = () => {
   const showHotelReg = useAppStore((state) => state.showHotelReg);
@@ -41,6 +51,7 @@ const App = () => {
   }, [isLoaded, user, getToken, fetchUser, resetUser]);
   return (
     <div>
+      <ScrollToTop />
       <Toaster />
       {showHotelReg && <HotelReg />}
       <Routes>
@@ -62,6 +73,9 @@ const App = () => {
           {/* by claude */}
           <Route path="my-hotel" element={<MyHotel />} />
         </Route>
+
+        {/* by claude: unknown URLs */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
   );

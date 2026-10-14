@@ -9,24 +9,27 @@ import { AnimatePresence, motion } from "motion/react"; // by claude
 
 const AllRooms = () => {
   const navigate = useNavigate();
-  const [openFilters, setOpenFilters] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const rooms = useAppStore((state) => state.rooms);
   const roomsLoading = useAppStore((state) => state.roomsLoading); // by claude
   const currency = useAppStore((state) => state.currency);
 
-  const [selectedFilters, setSelectedFilters] = useState({
+  // by claude: filters redesigned. Price bounds come from the real prices of the rooms.
+  const [filters, setFilters] = useState({
     roomType: [],
-    priceRange: [],
+    amenities: [],
+    minPrice: null, // null = no limit
+    maxPrice: null,
   });
   const [selectedSort, setSelectedSort] = useState("");
 
   const roomTypes = ["Single Bed", "Double Bed", "Luxury Room", "Family Suite"];
-  const priceRanges = [
-    "0 to 500",
-    "500 to 1000",
-    "1000 to 2000",
-    "2000 to 3000",
+  const amenityOptions = [
+    "Free WiFi",
+    "Free Breakfast",
+    "Room Service",
+    "Mountain View",
+    "Pool Access",
   ];
   const sortOptions = [
     "Price Low to High",
@@ -34,35 +37,52 @@ const AllRooms = () => {
     "Newest First",
   ];
 
-  const handleFilterChange = (checked, value, type) => {
-    setSelectedFilters((prev) => ({
+  const bounds = useMemo(() => {
+    if (!rooms.length) return { min: 0, max: 500 };
+    const prices = rooms.map((r) => r.pricePerNight);
+    return {
+      min: Math.floor(Math.min(...prices) / 10) * 10,
+      max: Math.ceil(Math.max(...prices) / 10) * 10,
+    };
+  }, [rooms]);
+
+  const handleToggle = (key, value) => {
+    setFilters((prev) => ({
       ...prev,
-      [type]: checked
-        ? [...prev[type], value]
-        : prev[type].filter((item) => item !== value),
+      [key]: prev[key].includes(value)
+        ? prev[key].filter((item) => item !== value)
+        : [...prev[key], value],
     }));
   };
 
-  const handleSortChange = (sortOption) => {
-    setSelectedSort(sortOption);
+  const handlePrice = (minPrice, maxPrice) => {
+    // back to "no limit" when the handles are at the ends
+    setFilters((prev) => ({
+      ...prev,
+      minPrice: minPrice <= bounds.min ? null : minPrice,
+      maxPrice: maxPrice >= bounds.max ? null : maxPrice,
+    }));
   };
 
-  const matchesRoomType = (room) => {
-    return (
-      selectedFilters.roomType.length === 0 ||
-      selectedFilters.roomType.includes(room.roomType)
-    );
-  };
+  const matchesRoomType = (room) =>
+    filters.roomType.length === 0 || filters.roomType.includes(room.roomType);
 
-  const matchesPriceRanges = (room) => {
-    return (
-      selectedFilters.priceRange.length === 0 ||
-      selectedFilters.priceRange.some((range) => {
-        const [min, max] = range.split(" to ").map(Number);
-        return room.pricePerNight >= min && room.pricePerNight <= max;
-      })
+  const matchesPrice = (room) =>
+    (filters.minPrice === null || room.pricePerNight >= filters.minPrice) &&
+    (filters.maxPrice === null || room.pricePerNight <= filters.maxPrice);
+
+  const matchesAmenities = (room) =>
+    filters.amenities.every((a) =>
+      (room.amenities || []).some(
+        (item) => item.toLowerCase() === a.toLowerCase(),
+      ),
     );
-  };
+
+  const activeCount =
+    filters.roomType.length +
+    filters.amenities.length +
+    (filters.minPrice !== null || filters.maxPrice !== null ? 1 : 0) +
+    (selectedSort ? 1 : 0);
 
   const sortRooms = (a, b) => {
     if (selectedSort === "Price Low to High") {
@@ -93,27 +113,25 @@ const AllRooms = () => {
       .filter(
         (room) =>
           matchesRoomType(room) &&
-          matchesPriceRanges(room) &&
+          matchesPrice(room) &&
+          matchesAmenities(room) &&
           filterHotel(room) &&
           filterDestination(room),
       )
       .sort(sortRooms);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rooms, selectedFilters, selectedSort, searchParams]);
+  }, [rooms, filters, selectedSort, searchParams]);
 
   const clearFilter = () => {
-    setSelectedFilters({
-      roomType: [],
-      priceRange: [],
-    });
+    setFilters({ roomType: [], amenities: [], minPrice: null, maxPrice: null });
     setSelectedSort("");
     setSearchParams({});
   };
 
   return (
-    <div className="flex flex-col-reverse lg:flex-row items-start justify-between pt-28 md:pt-35 px-4 md:px-16 lg:px-24 xl:px-32">
+    <div className="flex flex-col-reverse lg:flex-row items-start justify-between lg:gap-10 pt-28 md:pt-35 px-4 md:px-16 lg:px-24 xl:px-32">
       {/* Rooms List */}
-      <div className="w-full lg:w-3/4">
+      <div className="w-full lg:flex-1 min-w-0">
         {/* by claude: animated header + animated list */}
         <FadeIn className="flex flex-col items-start text-left">
           <h1 className="font-playfair text-4xl md:text-[40px]">Hotel Rooms</h1>
@@ -164,16 +182,17 @@ const AllRooms = () => {
       </div>
 
       <FilterSidebar
-        openFilters={openFilters}
-        setOpenFilters={setOpenFilters}
-        clearFilter={clearFilter}
         roomTypes={roomTypes}
-        priceRanges={priceRanges}
+        amenities={amenityOptions}
         sortOptions={sortOptions}
-        selectedFilters={selectedFilters}
-        selectedSort={selectedSort}
-        handleFilterChange={handleFilterChange}
-        handleSortChange={handleSortChange}
+        bounds={bounds}
+        filters={filters}
+        sort={selectedSort}
+        onToggle={handleToggle}
+        onPrice={handlePrice}
+        onSort={setSelectedSort}
+        onClear={clearFilter}
+        activeCount={activeCount}
         currency={currency}
       />
     </div>

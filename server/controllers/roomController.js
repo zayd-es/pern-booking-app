@@ -169,13 +169,16 @@ export const getRooms = async (req, res) => {
         isAvailable: true,
       },
       include: {
+        // by claude: public endpoint, only expose safe hotel fields (no contact / ownerId)
         hotel: {
-          include: {
-            owner: {
-              select: {
-                image: true,
-              },
-            },
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            city: true,
+            country: true,
+            createdAt: true,
+            owner: { select: { image: true } },
           },
         },
       },
