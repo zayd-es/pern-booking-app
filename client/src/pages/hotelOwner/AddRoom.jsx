@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import API from "../../lib/axios";
 import { useAppStore } from "../../store/useAppStore";
 import { useNavigate } from "react-router-dom";
+import imageCompression from "browser-image-compression"; // by claude
 
 // by claude: minimal restyle (flat cards, no shadows)
 const AddRoom = () => {
@@ -63,9 +64,21 @@ const AddRoom = () => {
       );
       formData.append("amenities", JSON.stringify(selectedAmenities));
 
-      Object.values(images)
-        .filter(Boolean)
-        .forEach((image) => formData.append("images", image));
+      // by claude: shrink photos in the browser (Vercel rejects request bodies > 4.5MB with a 413)
+      const compressed = await Promise.all(
+        Object.values(images)
+          .filter(Boolean)
+          .map((image) =>
+            imageCompression(image, {
+              maxSizeMB: 0.9,
+              maxWidthOrHeight: 1920,
+              useWebWorker: true,
+            }),
+          ),
+      );
+      compressed.forEach((image, i) =>
+        formData.append("images", image, `room-${i}.jpg`),
+      );
 
       const { data } = await API.post("/api/rooms", formData, {
         headers: { Authorization: `Bearer ${await getToken()}` },
@@ -91,7 +104,12 @@ const AddRoom = () => {
       }
     } catch (error) {
       console.error("Submission error:", error);
-      toast.error(error?.response?.data?.message || "Failed to submit form");
+      // by claude: friendly message when the request is still too big
+      toast.error(
+        error?.response?.status === 413
+          ? "Images are too large, please use smaller photos"
+          : error?.response?.data?.message || "Failed to submit form",
+      );
     } finally {
       setLoading(false);
     }
