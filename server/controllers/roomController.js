@@ -282,6 +282,7 @@ export const getRooms = async (req, res) => {
           select: {
             id: true,
             name: true,
+            description: true, // by claude
             address: true,
             city: true,
             country: true,

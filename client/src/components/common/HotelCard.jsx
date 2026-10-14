@@ -12,7 +12,7 @@ const HotelCard = ({ hotel, index = 0 }) => {
   return (
     <FadeIn delay={(index % 4) * 0.08} className="w-full">
       <Link
-        to={`/rooms?hotel=${hotel.id}`}
+        to={`/hotels/${hotel.id}`} // by claude: hotel page
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         className="group block w-full"
       >

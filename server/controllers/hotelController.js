@@ -8,6 +8,12 @@ const hotelRegisterSchema = z.object({
   address: z.string().min(5, "Address is too short"),
   contact: z.string().min(5, "Contact number/email is required"),
   // by claude: only Moroccan cities / Morocco are accepted
+  // by claude: optional description (max 600 chars)
+  description: z
+    .string()
+    .trim()
+    .max(600, "Description must be at most 600 characters")
+    .optional(),
   city: z.enum(MOROCCAN_CITIES, { error: "Please choose a Moroccan city" }),
   country: z.literal(COUNTRY, { error: "Only Morocco is supported" }),
 });
@@ -22,7 +28,8 @@ export const registerHotel = async (req, res) => {
       });
     }
 
-    const { name, address, contact, city, country } = validationResult.data;
+    const { name, address, contact, city, country, description } =
+      validationResult.data;
     const userId = req.user.id;
 
     const existingHotel = await prisma.hotel.findFirst({
@@ -40,6 +47,7 @@ export const registerHotel = async (req, res) => {
         name,
         address,
         contact,
+        description: description || null, // by claude
         city,
         country,
         ownerId: userId,
@@ -167,6 +175,47 @@ export const deleteMyHotel = async (req, res) => {
     ]);
 
     return res.json({ success: true, message: "Hotel deleted successfully" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// by claude: PUBLIC hotel page data (safe fields only: no contact, no ownerId) + its available rooms
+export const getHotelById = async (req, res) => {
+  try {
+    const hotel = await prisma.hotel.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        address: true,
+        city: true,
+        country: true,
+        createdAt: true,
+        owner: { select: { image: true } },
+        rooms: {
+          where: { isAvailable: true },
+          orderBy: { pricePerNight: "asc" },
+          select: {
+            id: true,
+            roomType: true,
+            description: true,
+            pricePerNight: true,
+            amenities: true,
+            images: true,
+          },
+        },
+      },
+    });
+
+    if (!hotel) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Hotel not found" });
+    }
+
+    return res.json({ success: true, hotel });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

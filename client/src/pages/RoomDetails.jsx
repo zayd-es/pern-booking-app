@@ -163,6 +163,12 @@ const RoomDetails = () => {
               <h2 className="text-2xl font-playfair font-semibold text-gray-900">
                 A Sophisticated Stay Experience
               </h2>
+              {/* by claude: real hotel description when the owner wrote one */}
+              {room.hotel.description ? (
+                <p className="text-gray-600 font-inter leading-relaxed text-sm md:text-base whitespace-pre-line">
+                  {room.hotel.description}
+                </p>
+              ) : (
               <p className="text-gray-600 font-inter leading-relaxed text-sm md:text-base">
                 Immerse yourself in comfort at {room.hotel.name}. Designed with
                 a clean, modern aesthetic, this{" "}
@@ -173,6 +179,7 @@ const RoomDetails = () => {
                 productivity alike, situated right in the vibrant heart of{" "}
                 {room.hotel.city}.
               </p>
+              )}
 
               {/* Dynamic Amenities */}
               <div className="pt-4 border-t border-gray-100">

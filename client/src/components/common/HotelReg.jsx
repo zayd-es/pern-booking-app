@@ -20,6 +20,7 @@ const HotelReg = () => {
     name: "",
     contact: "",
     address: "",
+    description: "", // by claude
     city: "",
     country: "Morocco",
   });
@@ -147,6 +148,23 @@ const HotelReg = () => {
                 className={inputClass}
                 minLength={5}
                 required
+              />
+            </div>
+
+            {/* by claude: optional hotel description */}
+            <div>
+              <label htmlFor="description" className={labelClass}>
+                Description <span className="font-normal normal-case text-gray-400">(optional)</span>
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                rows={3}
+                maxLength={600}
+                value={form.description}
+                onChange={handleChange}
+                placeholder="Tell guests what makes your hotel special"
+                className={`${inputClass} resize-none`}
               />
             </div>
 

@@ -18,6 +18,7 @@ export const useHotels = () => {
         name: room.hotel.name,
         city: room.hotel.city,
         country: room.hotel.country,
+        description: room.hotel.description, // by claude
         createdAt: room.hotel.createdAt,
         image: null,
         minPrice: Infinity,

@@ -8,7 +8,7 @@ import API from "../../lib/axios";
 import { cities } from "../../lib/cities";
 import { useAppStore } from "../../store/useAppStore";
 
-const FIELDS = ["name", "contact", "address", "city", "country"];
+const FIELDS = ["name", "contact", "address", "description", "city", "country"]; // by claude: + description
 
 const MyHotel = () => {
   const { getToken } = useAuth();
@@ -21,6 +21,7 @@ const MyHotel = () => {
     name: "",
     contact: "",
     address: "",
+    description: "", // by claude
     city: "",
     country: "",
   });
@@ -189,6 +190,23 @@ const MyHotel = () => {
               onChange={handleChange}
               className={inputClass}
               required
+            />
+          </div>
+
+          {/* by claude: optional hotel description */}
+          <div>
+            <label htmlFor="description" className={labelClass}>
+              Description <span className="font-normal normal-case text-gray-400">(optional)</span>
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows={3}
+              maxLength={600}
+              value={form.description}
+              onChange={handleChange}
+              placeholder="Tell guests what makes your hotel special"
+              className={`${inputClass} resize-none`}
             />
           </div>
 
