@@ -1,6 +1,7 @@
 // by claude: card now shows a HOTEL (not a room): cover photo, name, city, "from $X / night", rooms count
 import { Link } from "react-router-dom";
-import { Star, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
+import RatingBadge from "./RatingBadge"; // by claude
 import { useAppStore } from "../../store/useAppStore";
 import FadeIn from "./FadeIn";
 
@@ -30,10 +31,7 @@ const HotelCard = ({ hotel, index = 0 }) => {
         <div className="pt-3">
           <div className="flex items-center justify-between gap-2">
             <p className="truncate font-medium text-gray-900">{hotel.name}</p>
-            <div className="flex shrink-0 items-center gap-1 text-sm font-medium text-gray-700">
-              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              <span>4.5</span>
-            </div>
+            <RatingBadge rating={hotel.rating} />
           </div>
 
           <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-gray-500">

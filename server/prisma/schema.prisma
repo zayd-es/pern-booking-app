@@ -22,6 +22,7 @@ model User {
   updatedAt            DateTime @updatedAt
   hotels Hotel[]
   booking Booking[]
+  reviews Review[] // by claude
 }
 
 model Hotel {
@@ -38,6 +39,7 @@ model Hotel {
 
   rooms Room[]
   booking Booking[]
+  reviews Review[] // by claude
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -91,6 +93,7 @@ model Booking {
   status        BookingStatus @default(PENDING)
   paymentMethod String        @default("Pay At Hotel")
   paymentIntentId String?     // by claude: Stripe PaymentIntent id, needed to refund a paid booking
+  review        Review?       // by claude: one review per booking
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -98,4 +101,21 @@ model Booking {
   @@index([userId, createdAt])
   @@index([hotelId, createdAt])
   @@index([roomId, checkInDate, checkOutDate])
+}
+
+// by claude: a guest reviews a hotel after a paid stay (one review per booking)
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // 1 to 5
+  comment   String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hotelId   String
+  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([hotelId, createdAt])
+  @@index([userId])
 }

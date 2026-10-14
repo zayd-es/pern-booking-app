@@ -1,12 +1,15 @@
 // by claude: public hotel page (description, gallery, address, available rooms)
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { MapPin, Star, ArrowRight } from "lucide-react";
+import { MapPin, ArrowRight } from "lucide-react";
 import API from "../lib/axios";
 import { useAppStore } from "../store/useAppStore";
 import FadeIn from "../components/common/FadeIn";
 import Skeleton from "../components/common/Skeleton";
 import FacilityIcon from "../components/common/FacilityIcon";
+import RatingBadge from "../components/common/RatingBadge"; // by claude
+import StarRating from "../components/common/StarRating"; // by claude
+import Pagination from "../components/common/Pagination"; // by claude
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -14,6 +17,31 @@ const HotelDetails = () => {
   const [hotel, setHotel] = useState(null);
   const [status, setStatus] = useState("loading"); // loading | ready | notfound | error
   const [mainImage, setMainImage] = useState(null);
+
+  // by claude: reviews (5 per page)
+  const [reviews, setReviews] = useState([]);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewPages, setReviewPages] = useState(1);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadReviews = async () => {
+      try {
+        const { data } = await API.get(`/api/reviews/hotel/${id}`, {
+          params: { page: reviewPage, limit: 5 },
+        });
+        if (cancelled || !data.success) return;
+        setReviews(data.reviews);
+        setReviewPages(data.pagination.totalPages || 1);
+      } catch {
+        if (!cancelled) setReviews([]);
+      }
+    };
+    loadReviews();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, reviewPage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,10 +111,9 @@ const HotelDetails = () => {
             <MapPin className="h-4 w-4" />
             {hotel.address}, {hotel.city}, {hotel.country}
           </p>
-          <p className="mt-2 flex items-center gap-1.5 text-sm text-gray-700">
-            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-            4.5
-          </p>
+          <div className="mt-2">
+            <RatingBadge rating={hotel.rating} />
+          </div>
         </div>
         {minPrice !== null && (
           <p className="text-gray-500">
@@ -142,6 +169,67 @@ const HotelDetails = () => {
           </p>
         </FadeIn>
       )}
+
+      <section className="mt-12 max-w-3xl">
+        <FadeIn>
+          <h2 className="text-xl font-semibold text-gray-900">
+            Guest reviews
+            {hotel.rating?.count > 0 && (
+              <span className="ml-2 text-base font-normal text-gray-500">
+                {hotel.rating.average.toFixed(1)} / 5 · {hotel.rating.count}{" "}
+                review{hotel.rating.count === 1 ? "" : "s"}
+              </span>
+            )}
+          </h2>
+        </FadeIn>
+
+        {reviews.length === 0 ? (
+          <p className="mt-4 text-gray-500">
+            No reviews yet. Guests can review this hotel after their stay.
+          </p>
+        ) : (
+          <div className="mt-5 divide-y divide-gray-200">
+            {reviews.map((review) => (
+              <div key={review.id} className="flex gap-4 py-5">
+                {review.user?.image ? (
+                  <img
+                    src={review.user.image}
+                    alt=""
+                    className="h-11 w-11 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                    {(review.user?.username || "G")[0].toUpperCase()}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <p className="font-medium text-gray-900">
+                      {review.user?.username || "Guest"}
+                    </p>
+                    <StarRating rating={review.rating} />
+                    <span className="text-xs text-gray-400">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {review.comment && (
+                    <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-gray-600">
+                      {review.comment}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Pagination
+          page={reviewPage}
+          totalPages={reviewPages}
+          onChange={setReviewPage}
+          className="mt-4"
+        />
+      </section>
 
       <section className="mt-12">
         <FadeIn>

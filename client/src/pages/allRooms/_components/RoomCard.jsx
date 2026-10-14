@@ -1,5 +1,6 @@
 // by claude: compact vertical card (photo on top) so 3-4 rooms fit on one row
-import { MapPin, Star } from "lucide-react";
+import { MapPin } from "lucide-react";
+import RatingBadge from "../../../components/common/RatingBadge"; // by claude
 import FacilityIcon from "../../../components/common/FacilityIcon";
 
 const RoomCard = ({ room, currency, navigate }) => {
@@ -32,10 +33,7 @@ const RoomCard = ({ room, currency, navigate }) => {
       <div className="pt-3">
         <div className="flex items-center justify-between gap-2">
           <p className="truncate font-medium text-gray-900">{room.hotel.name}</p>
-          <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-gray-700">
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-            4.5
-          </span>
+          <RatingBadge rating={room.hotel.rating} />
         </div>
 
         <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-gray-500">

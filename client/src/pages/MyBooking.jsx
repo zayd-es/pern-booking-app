@@ -1,16 +1,29 @@
 import { useEffect, useState } from "react";
 import Title from "../components/common/Title";
-import { MapPin, Users } from "lucide-react"; // by claude
+import { MapPin, Users, Star } from "lucide-react"; // by claude
 import { useAuth } from "@clerk/clerk-react";
 import API from "../lib/axios";
 import toast from "react-hot-toast";
 import FadeIn from "../components/common/FadeIn"; // by claude
 import Pagination from "../components/common/Pagination"; // by claude
+import ReviewModal from "../components/common/ReviewModal"; // by claude
 
 const MyBooking = () => {
   const { userId, getToken } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [now] = useState(() => Date.now()); // by claude: "current time" for the cancel rule
+  const [reviewing, setReviewing] = useState(null); // by claude: booking being reviewed
+
+  // by claude: paid + stay is over + not reviewed yet
+  const canReview = (booking) =>
+    booking.status === "CONFIRMED" &&
+    !booking.review &&
+    new Date(booking.checkOutDate).getTime() < now;
+
+  const markReviewed = (bookingId, review) =>
+    setBookings((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, review } : b)),
+    );
 
   // by claude: bookings come 10 per page from the server, numbered pagination below the list
   const [page, setPage] = useState(1);
@@ -164,6 +177,21 @@ const MyBooking = () => {
                 <span className={`rounded-full px-3 py-1 text-xs font-medium ${st.cls}`}>
                   {st.label}
                 </span>
+                {/* by claude: review after the stay */}
+                {canReview(booking) && (
+                  <button
+                    onClick={() => setReviewing(booking)}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-gray-900 px-4 py-1.5 text-xs text-white transition-all hover:bg-gray-700"
+                  >
+                    <Star className="h-3.5 w-3.5" /> Rate your stay
+                  </button>
+                )}
+                {booking.review && (
+                  <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    You rated this stay
+                  </span>
+                )}
                 {/* by claude: paid + free cancellation window -> cancel with refund */}
                 {canCancelPaid(booking) && (
                   <button
@@ -204,6 +232,15 @@ const MyBooking = () => {
           className="mt-4"
         />
       </div>
+
+      {/* by claude: review popup */}
+      {reviewing && (
+        <ReviewModal
+          booking={reviewing}
+          onClose={() => setReviewing(null)}
+          onDone={markReviewed}
+        />
+      )}
     </div>
   );
 };

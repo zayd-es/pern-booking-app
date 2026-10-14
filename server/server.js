@@ -9,6 +9,7 @@ import userRouter from "./routes/user.js";
 import hotelRouter from "./routes/hotel.js";
 import roomRouter from "./routes/room.js";
 import bookingRouter from "./routes/booking.js";
+import reviewRouter from "./routes/review.js"; // by claude
 import { stripeWebhooks } from "./controllers/stripeWebhooks.js";
 
 const app = express();
@@ -77,12 +78,14 @@ const writeLimiter = rateLimit({
 });
 app.use("/api/bookings/book", writeLimiter);
 app.use("/api/bookings/stripe-payment", writeLimiter);
+app.post("/api/reviews", writeLimiter); // by claude (only creating, reading stays unlimited)
 
 app.get("/", (req, res) => res.send("API IS WORKING"));
 app.use("/api/users", userRouter);
 app.use("/api/hotels", hotelRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
+app.use("/api/reviews", reviewRouter); // by claude
 
 // by claude: unknown routes + one place for unexpected errors (no stack traces to the client)
 app.use((req, res) => {

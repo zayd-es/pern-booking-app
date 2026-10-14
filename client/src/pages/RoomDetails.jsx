@@ -219,10 +219,19 @@ const RoomDetails = () => {
                     Hosted by {room.hotel.name} Management
                   </p>
                   <div className="flex items-center gap-2 mt-1">
-                    <StarRating />
-                    <span className="text-xs font-inter text-gray-500">
-                      (Verified Partner)
-                    </span>
+                    {/* by claude: real rating from the reviews */}
+                    {room.hotel.rating?.count ? (
+                      <>
+                        <StarRating rating={Math.round(room.hotel.rating.average)} />
+                        <span className="text-xs font-inter text-gray-500">
+                          {room.hotel.rating.average.toFixed(1)} ({room.hotel.rating.count} reviews)
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs font-inter text-gray-500">
+                        No reviews yet
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

@@ -1,5 +1,10 @@
 import Stripe from "stripe";
 import prisma from "../configs/prisma.js";
+import {
+  sendEmail,
+  bookingConfirmedEmail,
+  newBookingOwnerEmail,
+} from "../configs/mailer.js"; // by claude
 
 // by claude: confirm a booking after payment (skips cancelled/already confirmed ones)
 const confirmBooking = async (bookingId, paymentIntentId) => {
@@ -28,6 +33,18 @@ const confirmBooking = async (bookingId, paymentIntentId) => {
       paymentIntentId: paymentIntentId || null,
     },
   });
+
+  // by claude: emails (guest + hotel owner). They never throw, a mail problem can't fail the webhook.
+  const full = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { user: true, room: true, hotel: { include: { owner: true } } },
+  });
+  if (full) {
+    await Promise.all([
+      sendEmail(bookingConfirmedEmail(full, full.user)),
+      sendEmail(newBookingOwnerEmail(full, full.user, full.hotel.owner)),
+    ]);
+  }
 };
 
 export const stripeWebhooks = async (request, response) => {

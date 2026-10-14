@@ -1,6 +1,7 @@
 import prisma from "../configs/prisma.js";
 import { z } from "zod";
 import cloudinary from "../configs/cloudinary.js";
+import { getHotelRatings } from "./reviewController.js"; // by claude
 import { MOROCCAN_CITIES, COUNTRY } from "../configs/cities.js"; // by claude
 
 const hotelRegisterSchema = z.object({
@@ -214,6 +215,9 @@ export const getHotelById = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Hotel not found" });
     }
+
+    const ratings = await getHotelRatings([hotel.id]); // by claude
+    hotel.rating = ratings[hotel.id] || { average: 0, count: 0 };
 
     return res.json({ success: true, hotel });
   } catch (error) {

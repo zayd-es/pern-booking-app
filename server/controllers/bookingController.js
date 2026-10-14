@@ -1,5 +1,10 @@
 import prisma from "../configs/prisma.js";
-import resend from "../configs/resend.js";
+import {
+  sendEmail,
+  bookingReceivedEmail,
+  bookingCancelledEmail,
+  bookingCancelledOwnerEmail,
+} from "../configs/mailer.js"; // by claude
 import Stripe from "stripe";
 export const checkAvailability = async ({
   roomId,
@@ -153,45 +158,13 @@ export const createBooking = async (req, res) => {
       });
     }
 
-    const toEmail =
-      req.user?.email ||
-      req.user?.emailAddresses?.[0]?.emailAddress ||
-      req.auth?.sessionClaims?.email;
-
-    if (!toEmail) {
-      console.error("User email is missing (check Clerk/middleware).");
-    } else {
-      try {
-        const { data, error } = await resend.emails.send({
-          from: "Hotel Booking <onboarding@resend.dev>",
-          to: [toEmail],
-          subject: "Hotel Booking Details",
-          html: `
-            <h2>Your Booking Details</h2>
-            <p>Dear ${req.user.username || "Guest"},</p>
-            <p>Thank you for your booking! Here are your details:</p>
-            <ul>
-              <li><strong>Booking ID:</strong> ${booking.id}</li>
-              <li><strong>Hotel Name:</strong> ${roomData.hotel.name}</li>
-              <li><strong>Location:</strong> ${roomData.hotel.address}</li>
-              <li><strong>Check-in:</strong> ${booking.checkInDate.toDateString()}</li>
-              <li><strong>Check-out:</strong> ${booking.checkOutDate.toDateString()}</li>
-              <li><strong>Total Amount:</strong> ${process.env.CURRENCY || "$"} ${booking.totalPrice}</li>
-            </ul>
-            <p>We look forward to welcoming you!</p>
-            <p>If you need to make any changes, feel free to contact us.</p>
-          `,
-        });
-
-        if (error) {
-          console.error("Resend error:", error);
-        } else {
-          console.log(`Confirmation sent to ${toEmail} (id: ${data.id})`);
-        }
-      } catch (emailError) {
-        console.error("Failed to send email:", emailError.message);
-      }
-    }
+    // by claude: "booking received" email (the confirmation email is sent after the payment)
+    await sendEmail(
+      bookingReceivedEmail(
+        { ...booking, hotel: roomData.hotel, room: roomData },
+        req.user,
+      ),
+    );
 
     return res.status(201).json({
       success: true,
@@ -226,6 +199,7 @@ export const getUserBookings = async (req, res) => {
         include: {
           room: true,
           hotel: true,
+          review: { select: { id: true } }, // by claude: lets the UI hide "Write a review"
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -332,7 +306,11 @@ export const cancelBooking = async (req, res) => {
 
     const booking = await prisma.booking.findUnique({
       where: { id },
-      include: { hotel: { select: { ownerId: true } } },
+      include: {
+        user: true,
+        room: true,
+        hotel: { include: { owner: true } }, // by claude: for the emails
+      },
     });
 
     if (!booking) {
@@ -403,6 +381,21 @@ export const cancelBooking = async (req, res) => {
       where: { id },
       data: { status: "CANCELLED" },
     });
+
+    // by claude: tell the guest (and the owner when the guest cancelled)
+    await Promise.all([
+      sendEmail(
+        bookingCancelledEmail(booking, booking.user, {
+          refunded,
+          byOwner: isHotelOwner && !isGuest,
+        }),
+      ),
+      isGuest
+        ? sendEmail(
+            bookingCancelledOwnerEmail(booking, booking.user, booking.hotel.owner),
+          )
+        : Promise.resolve(),
+    ]);
 
     // old paid bookings (made before refunds existed) have no paymentIntentId
     const needsManualRefund =

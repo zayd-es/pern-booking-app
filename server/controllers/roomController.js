@@ -1,6 +1,7 @@
 import prisma from "../configs/prisma.js";
 import cloudinary from "../configs/cloudinary.js";
 import { z } from "zod";
+import { getHotelRatings } from "./reviewController.js"; // by claude
 import fs from "fs/promises"; // by claude
 
 const createRoomSchema = z.object({
@@ -296,7 +297,17 @@ export const getRooms = async (req, res) => {
       },
     });
 
-    return res.json({ success: true, rooms });
+    // by claude: real average rating + number of reviews of each hotel
+    const ratings = await getHotelRatings([...new Set(rooms.map((r) => r.hotelId))]);
+    const roomsWithRating = rooms.map((room) => ({
+      ...room,
+      hotel: {
+        ...room.hotel,
+        rating: ratings[room.hotelId] || { average: 0, count: 0 },
+      },
+    }));
+
+    return res.json({ success: true, rooms: roomsWithRating });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

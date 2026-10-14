@@ -184,6 +184,93 @@ const clear = async () => {
   return count;
 };
 
+// by claude: demo guests + past paid bookings + reviews, so ratings show up on the site.
+// Idempotent: a hotel that already has demo reviews is skipped.
+const GUESTS = [
+  "Sara El Idrissi",
+  "Youssef Benali",
+  "Emma Rodriguez",
+  "Liam Johnson",
+  "Fatima Zahra",
+  "Karim Alaoui",
+];
+const REVIEWS = [
+  [5, "Absolutely wonderful stay. The room was spotless, the staff were so welcoming and the location is perfect."],
+  [5, "Exactly what we hoped for. Great breakfast, comfortable bed and helpful hosts. We will be back."],
+  [4, "Very nice hotel with great atmosphere. The room was a little small but very clean and well decorated."],
+  [4, "Good value for money and a lovely setting. Check-in was quick and the team gave us great tips for the city."],
+  [5, "One of the best stays we had in Morocco. Beautiful place, delicious food and very kind people."],
+  [3, "Nice place overall. The room was comfortable but it was a bit noisy at night. Staff were friendly though."],
+];
+
+const seedReviews = async () => {
+  const guests = [];
+  for (const [i, name] of GUESTS.entries()) {
+    guests.push(
+      await prisma.user.upsert({
+        where: { id: `seed_guest_${i + 1}` },
+        update: {},
+        create: {
+          id: `seed_guest_${i + 1}`,
+          username: name,
+          email: `seed.guest${i + 1}@example.com`,
+          image: `https://i.pravatar.cc/150?img=${i + 30}`,
+        },
+      }),
+    );
+  }
+
+  const hotels = await prisma.hotel.findMany({
+    where: { ownerId: { startsWith: "seed_owner_" } },
+    include: { rooms: { take: 1, orderBy: { createdAt: "asc" } } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  for (const [h, hotel] of hotels.entries()) {
+    const room = hotel.rooms[0];
+    if (!room) continue;
+    const already = await prisma.review.count({
+      where: { hotelId: hotel.id, userId: { startsWith: "seed_guest_" } },
+    });
+    if (already > 0) continue;
+
+    const howMany = 3 + (h % 3); // 3 to 5 reviews per hotel
+    for (let k = 0; k < howMany; k++) {
+      const guest = guests[(h + k) % guests.length];
+      const [rating, comment] = REVIEWS[(h + k * 2) % REVIEWS.length];
+      const checkIn = new Date();
+      checkIn.setUTCHours(0, 0, 0, 0);
+      checkIn.setUTCDate(checkIn.getUTCDate() - (20 + k * 25 + h));
+      const checkOut = new Date(checkIn);
+      checkOut.setUTCDate(checkOut.getUTCDate() + 2);
+
+      const booking = await prisma.booking.create({
+        data: {
+          userId: guest.id,
+          roomId: room.id,
+          hotelId: hotel.id,
+          checkInDate: checkIn,
+          checkOutDate: checkOut,
+          totalPrice: room.pricePerNight * 2,
+          guests: 2,
+          status: "CONFIRMED",
+          paymentMethod: "Stripe",
+        },
+      });
+      await prisma.review.create({
+        data: {
+          rating,
+          comment,
+          userId: guest.id,
+          hotelId: hotel.id,
+          bookingId: booking.id,
+        },
+      });
+    }
+    console.log(`+ ${howMany} reviews for ${hotel.name}`);
+  }
+};
+
 const main = async () => {
   if (process.argv.includes("--clear")) {
     const removed = await clear();
@@ -239,6 +326,7 @@ const main = async () => {
       console.log(`+ created ${h.name} (${h.city}) - ${h.rooms.length} rooms`);
     }
   }
+  await seedReviews(); // by claude
   console.log("Done.");
 };
 
