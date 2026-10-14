@@ -5,42 +5,35 @@ import { useAuth } from "@clerk/clerk-react";
 import API from "../lib/axios";
 import toast from "react-hot-toast";
 import FadeIn from "../components/common/FadeIn"; // by claude
+import Pagination from "../components/common/Pagination"; // by claude
 
 const MyBooking = () => {
   const { userId, getToken } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [now] = useState(() => Date.now()); // by claude: "current time" for the cancel rule
 
-  // by claude: bookings are loaded 10 at a time ("Load more" asks for the next page)
+  // by claude: bookings come 10 per page from the server, numbered pagination below the list
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // by claude: shared by the first load (effect) and "Load more"
-  const applyPage = (data, pageToLoad) => {
-    setBookings((prev) =>
-      pageToLoad === 1 ? data.bookings : [...prev, ...data.bookings],
-    );
-    setPage(pageToLoad);
-    setHasMore(
-      Boolean(data.pagination) &&
-        data.pagination.page < data.pagination.totalPages,
-    );
+  const applyPage = (data) => {
+    setBookings(data.bookings);
+    setPage(data.pagination?.page || 1);
+    setTotalPages(data.pagination?.totalPages || 1);
   };
 
-  const loadMore = async () => {
-    setLoadingMore(true);
+  const goToPage = async (pageToLoad) => {
     try {
       const { data } = await API.get("/api/bookings/user", {
-        params: { page: page + 1, limit: 10 },
+        params: { page: pageToLoad, limit: 2 }, // TEMP-TEST by claude: put back 10
         headers: { Authorization: `Bearer ${await getToken()}` },
       });
-      if (data.success) applyPage(data, page + 1);
-      else toast.error(data.message);
+      if (data.success) {
+        applyPage(data);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else toast.error(data.message);
     } catch (error) {
       toast.error(error.message);
-    } finally {
-      setLoadingMore(false);
     }
   };
 
@@ -48,10 +41,10 @@ const MyBooking = () => {
     const fetchFirstPage = async () => {
       try {
         const { data } = await API.get("/api/bookings/user", {
-          params: { page: 1, limit: 10 },
+          params: { page: 1, limit: 2 }, // TEMP-TEST by claude: put back 10
           headers: { Authorization: `Bearer ${await getToken()}` },
         });
-        if (data.success) applyPage(data, 1);
+        if (data.success) applyPage(data);
         else toast.error(data.message);
       } catch (error) {
         toast.error(error.message);
@@ -203,16 +196,13 @@ const MyBooking = () => {
           );
         })}
 
-        {/* by claude: pagination, 10 bookings per page */}
-        {hasMore && (
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="mx-auto mt-2 cursor-pointer rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:opacity-60"
-          >
-            {loadingMore ? "Loading..." : "Load more"}
-          </button>
-        )}
+        {/* by claude: numbered pagination */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onChange={goToPage}
+          className="mt-4"
+        />
       </div>
     </div>
   );

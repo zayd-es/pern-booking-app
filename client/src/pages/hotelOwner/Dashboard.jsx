@@ -5,6 +5,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import API from "../../lib/axios";
 import toast from "react-hot-toast";
+import Pagination from "../../components/common/Pagination"; // by claude
 
 // by claude: minimal restyle (neutral stat cards, rounded table)
 const Dashboard = () => {
@@ -22,8 +23,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   // by claude: bookings table is paginated (10 per page), stats come from the server for ALL bookings
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageLoading, setPageLoading] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -31,13 +32,13 @@ const Dashboard = () => {
         setLoading(true);
         const token = await getToken();
         const { data } = await API.get("/api/bookings/hotel", {
-          params: { page: 1, limit: 10 },
+          params: { page: 1, limit: 2 }, // TEMP-TEST by claude: put back 10
           headers: { Authorization: `Bearer ${token}` },
         });
         if (data.success) {
           setDashboardData(data.dashboardData);
-          const p = data.dashboardData.pagination;
-          setHasMore(Boolean(p) && p.page < p.totalPages);
+          setPage(data.dashboardData.pagination?.page || 1);
+          setTotalPages(data.dashboardData.pagination?.totalPages || 1);
         } else toast.error(data.message || "Failed to load dashboard data");
       } catch (error) {
         console.error("Dashboard fetch error:", error);
@@ -53,29 +54,25 @@ const Dashboard = () => {
     }
   }, [isLoaded, user, getToken]);
 
-  // by claude: load the next 10 bookings and add them to the table
-  const loadMore = async () => {
-    setLoadingMore(true);
+  // by claude: open another page of bookings (the stats are refreshed too)
+  const goToPage = async (pageToLoad) => {
+    setPageLoading(true);
     try {
       const { data } = await API.get("/api/bookings/hotel", {
-        params: { page: page + 1, limit: 10 },
+        params: { page: pageToLoad, limit: 2 }, // TEMP-TEST by claude: put back 10
         headers: { Authorization: `Bearer ${await getToken()}` },
       });
       if (data.success) {
-        setDashboardData((prev) => ({
-          ...prev,
-          bookings: [...prev.bookings, ...data.dashboardData.bookings],
-        }));
-        setPage(page + 1);
-        const p = data.dashboardData.pagination;
-        setHasMore(p.page < p.totalPages);
+        setDashboardData(data.dashboardData);
+        setPage(data.dashboardData.pagination?.page || pageToLoad);
+        setTotalPages(data.dashboardData.pagination?.totalPages || 1);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to load bookings");
     } finally {
-      setLoadingMore(false);
+      setPageLoading(false);
     }
   };
 
@@ -181,7 +178,7 @@ const Dashboard = () => {
           Recent Bookings
         </h2>
 
-        <div className="w-full max-w-4xl text-left border border-gray-200 rounded-2xl max-h-80 overflow-y-auto">
+        <div className={`w-full max-w-4xl text-left border border-gray-200 rounded-2xl max-h-80 overflow-y-auto transition-opacity ${pageLoading ? "opacity-50" : ""}`}>
           <table className="w-full">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
@@ -265,16 +262,13 @@ const Dashboard = () => {
           </table>
         </div>
 
-        {/* by claude */}
-        {hasMore && (
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="mt-4 cursor-pointer rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:opacity-60"
-          >
-            {loadingMore ? "Loading..." : "Load more"}
-          </button>
-        )}
+        {/* by claude: numbered pagination */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onChange={goToPage}
+          className="mt-5 max-w-4xl"
+        />
       </div>
     </div>
   );
