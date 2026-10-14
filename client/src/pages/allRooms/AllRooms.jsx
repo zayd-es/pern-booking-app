@@ -6,6 +6,7 @@ import FilterSidebar from "./_components/FilterSidebar";
 import FadeIn from "../../components/common/FadeIn"; // by claude
 import RoomCardSkeleton from "./_components/RoomCardSkeleton"; // by claude
 import { AnimatePresence, motion } from "motion/react"; // by claude
+import { ChevronDown } from "lucide-react"; // by claude
 
 const AllRooms = () => {
   const navigate = useNavigate();
@@ -147,11 +148,30 @@ const AllRooms = () => {
               {selectedHotel.name} <span aria-hidden="true">✕</span>
             </button>
           )}
-          <p className="mt-3 text-sm text-gray-400">
-            {roomsLoading
-              ? "Loading rooms..."
-              : `${filteredRooms.length} room${filteredRooms.length === 1 ? "" : "s"} found`}
-          </p>
+          {/* by claude: sort moved here (next to the count) to keep the filter panel short */}
+          <div className="mt-3 flex w-full items-center justify-between gap-3">
+            <p className="text-sm text-gray-400">
+              {roomsLoading
+                ? "Loading rooms..."
+                : `${filteredRooms.length} room${filteredRooms.length === 1 ? "" : "s"} found`}
+            </p>
+            <div className="relative">
+              <select
+                aria-label="Sort rooms"
+                value={selectedSort}
+                onChange={(e) => setSelectedSort(e.target.value)}
+                className="cursor-pointer appearance-none rounded-full border border-gray-200 bg-white py-1.5 pl-4 pr-9 text-sm text-gray-800 outline-none focus:border-gray-900"
+              >
+                <option value="">Sort: Recommended</option>
+                {sortOptions.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            </div>
+          </div>
         </FadeIn>
 
         {roomsLoading &&
@@ -184,13 +204,10 @@ const AllRooms = () => {
       <FilterSidebar
         roomTypes={roomTypes}
         amenities={amenityOptions}
-        sortOptions={sortOptions}
         bounds={bounds}
         filters={filters}
-        sort={selectedSort}
         onToggle={handleToggle}
         onPrice={handlePrice}
-        onSort={setSelectedSort}
         onClear={clearFilter}
         activeCount={activeCount}
         currency={currency}
