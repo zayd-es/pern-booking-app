@@ -48,7 +48,16 @@ const Dashboard = () => {
 
   // by claude: cancel a booking and update the stats locally
   const handleCancel = async (booking) => {
-    if (!window.confirm("Cancel this booking?")) return;
+    // by claude: the server refunds paid Stripe bookings automatically
+    const paid = booking.status === "CONFIRMED";
+    if (
+      !window.confirm(
+        paid
+          ? "Cancel this booking? The guest will be refunded automatically."
+          : "Cancel this booking?",
+      )
+    )
+      return;
     try {
       const token = await getToken();
       const { data } = await API.patch(

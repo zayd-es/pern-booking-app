@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import prisma from "../configs/prisma.js";
 
 // by claude: confirm a booking after payment (skips cancelled/already confirmed ones)
-const confirmBooking = async (bookingId) => {
+const confirmBooking = async (bookingId, paymentIntentId) => {
   if (!bookingId) {
     console.error("Stripe webhook: bookingId missing in metadata");
     return;
@@ -21,7 +21,12 @@ const confirmBooking = async (bookingId) => {
 
   await prisma.booking.update({
     where: { id: bookingId },
-    data: { status: "CONFIRMED", paymentMethod: "Stripe" },
+    // by claude: keep the PaymentIntent id so the booking can be refunded later
+    data: {
+      status: "CONFIRMED",
+      paymentMethod: "Stripe",
+      paymentIntentId: paymentIntentId || null,
+    },
   });
 };
 
@@ -45,7 +50,10 @@ export const stripeWebhooks = async (request, response) => {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       if (session.payment_status === "paid") {
-        await confirmBooking(session.metadata?.bookingId);
+        await confirmBooking(
+          session.metadata?.bookingId,
+          typeof session.payment_intent === "string" ? session.payment_intent : null,
+        );
       }
     }
     // by claude: old event, kept so payments still work until it's removed in the Stripe dashboard
@@ -53,7 +61,10 @@ export const stripeWebhooks = async (request, response) => {
       const sessions = await stripeInstance.checkout.sessions.list({
         payment_intent: event.data.object.id,
       });
-      await confirmBooking(sessions.data[0]?.metadata?.bookingId);
+      await confirmBooking(
+        sessions.data[0]?.metadata?.bookingId,
+        event.data.object.id,
+      );
     } else {
       console.log(`Unhandled event type :`, event.type);
     }

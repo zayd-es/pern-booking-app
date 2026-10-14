@@ -1,47 +1,88 @@
-import { useState } from "react";
-import { ImagePlus } from "lucide-react"; // by claude
+import { useEffect, useState } from "react";
+import { ImagePlus, X } from "lucide-react"; // by claude
 import Title from "../../components/common/Title";
 import { useAuth } from "@clerk/clerk-react";
 import toast from "react-hot-toast";
 import API from "../../lib/axios";
 import { useAppStore } from "../../store/useAppStore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import imageCompression from "browser-image-compression"; // by claude
 
-// by claude: minimal restyle (flat cards, no shadows)
+// by claude: this page is now used for BOTH "Add room" and "Edit room" (route /owner/edit-room/:id)
+const AMENITIES = [
+  "Free WiFi",
+  "Free Breakfast",
+  "Room Service",
+  "Mountain View",
+  "Pool Access",
+];
+const emptyInputs = () => ({
+  roomType: "",
+  pricePerNight: "",
+  description: "",
+  amenities: Object.fromEntries(AMENITIES.map((a) => [a, false])),
+});
+// each slot is null, { url } (already uploaded photo) or { file } (new photo)
+const emptySlots = () => [null, null, null, null];
+
 const AddRoom = () => {
+  const { id } = useParams();
+  const isEdit = Boolean(id);
   const { getToken } = useAuth();
   const fetchRooms = useAppStore((state) => state.fetchRooms);
   const navigate = useNavigate();
-  const [images, setImages] = useState({
-    1: null,
-    2: null,
-    3: null,
-    4: null,
-  });
 
-  const [inputs, setInputs] = useState({
-    roomType: "",
-    pricePerNight: "",
-    description: "",
-    amenities: {
-      "Free Wifi": false,
-      "Free Breakfast": false,
-      "Room Service": false,
-      "Mountain View": false,
-      "Pool Access": false,
-    },
-  });
-
+  const [slots, setSlots] = useState(emptySlots);
+  const [inputs, setInputs] = useState(emptyInputs);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(isEdit);
+
+  // edit mode: load the room and fill the form
+  useEffect(() => {
+    if (!isEdit) return;
+    const loadRoom = async () => {
+      try {
+        const { data } = await API.get("/api/rooms/owner", {
+          headers: { Authorization: `Bearer ${await getToken()}` },
+        });
+        const room = data.rooms?.find((r) => r.id === id);
+        if (!room) {
+          toast.error("Room not found");
+          navigate("/owner/list-room");
+          return;
+        }
+        const owned = (room.amenities || []).map((a) => a.toLowerCase());
+        setInputs({
+          roomType: room.roomType,
+          pricePerNight: String(room.pricePerNight),
+          description: room.description || "",
+          amenities: Object.fromEntries(
+            AMENITIES.map((a) => [a, owned.includes(a.toLowerCase())]),
+          ),
+        });
+        setSlots(
+          [0, 1, 2, 3].map((i) =>
+            room.images?.[i] ? { url: room.images[i] } : null,
+          ),
+        );
+      } catch (error) {
+        toast.error(error?.response?.data?.message || "Failed to load room");
+        navigate("/owner/list-room");
+      } finally {
+        setPageLoading(false);
+      }
+    };
+    loadRoom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const setSlot = (index, value) =>
+    setSlots((prev) => prev.map((s, i) => (i === index ? value : s)));
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
 
-    const hasImages = Object.values(images || {}).some((image) =>
-      Boolean(image),
-    );
-    if (!hasImages) {
+    if (!slots.some(Boolean)) {
       toast.error("Please upload at least one room image.");
       return;
     }
@@ -59,17 +100,25 @@ const AddRoom = () => {
       formData.append("pricePerNight", inputs.pricePerNight);
       formData.append("description", inputs.description);
 
-      const selectedAmenities = Object.keys(inputs.amenities || {}).filter(
+      const selectedAmenities = Object.keys(inputs.amenities).filter(
         (key) => inputs.amenities[key],
       );
       formData.append("amenities", JSON.stringify(selectedAmenities));
 
-      // by claude: shrink photos in the browser (Vercel rejects request bodies > 4.5MB with a 413)
+      // edit mode: tell the server which existing photos to keep
+      if (isEdit) {
+        formData.append(
+          "keepImages",
+          JSON.stringify(slots.filter((s) => s?.url).map((s) => s.url)),
+        );
+      }
+
+      // by claude: shrink NEW photos in the browser (Vercel rejects request bodies > 4.5MB with a 413)
       const compressed = await Promise.all(
-        Object.values(images)
-          .filter(Boolean)
-          .map((image) =>
-            imageCompression(image, {
+        slots
+          .filter((s) => s?.file)
+          .map((s) =>
+            imageCompression(s.file, {
               maxSizeMB: 0.9,
               maxWidthOrHeight: 1920,
               useWebWorker: true,
@@ -80,27 +129,21 @@ const AddRoom = () => {
         formData.append("images", image, `room-${i}.jpg`),
       );
 
-      const { data } = await API.post("/api/rooms", formData, {
-        headers: { Authorization: `Bearer ${await getToken()}` },
-      });
+      const headers = { Authorization: `Bearer ${await getToken()}` };
+      const { data } = isEdit
+        ? await API.patch(`/api/rooms/${id}`, formData, { headers })
+        : await API.post("/api/rooms", formData, { headers });
 
       if (data.success) {
         toast.success(data.message);
         await fetchRooms();
         navigate("/owner/list-room");
-        setInputs({
-          roomType: "",
-          pricePerNight: "",
-          description: "",
-          amenities: {
-            "Free Wifi": false,
-            "Free Breakfast": false,
-            "Room Service": false,
-            "Mountain View": false,
-            "Pool Access": false,
-          },
-        });
-        setImages({ 1: null, 2: null, 3: null, 4: null });
+        if (!isEdit) {
+          setInputs(emptyInputs());
+          setSlots(emptySlots());
+        }
+      } else {
+        toast.error(data.message);
       }
     } catch (error) {
       console.error("Submission error:", error);
@@ -115,11 +158,20 @@ const AddRoom = () => {
     }
   };
 
+  if (pageLoading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-gray-500 gap-2">
+        <span className="h-5 w-5 rounded-full border-2 border-gray-900 border-t-transparent animate-spin" />
+        <span className="text-sm font-semibold">Loading room...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl font-sans py-4 px-2">
       <Title
         align="left"
-        title="Add New Room"
+        title={isEdit ? "Edit Room" : "Add New Room"}
         subTitle="Provide clear details, accurate pricing, and amenities to elevate your guests' booking experience."
       />
 
@@ -134,35 +186,48 @@ const AddRoom = () => {
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {Object.keys(images).map((key) => (
-              <label
-                htmlFor={`roomImage${key}`}
-                key={key}
-                className="flex flex-col items-center justify-center h-28 rounded-xl border-2 border-dashed border-gray-300 hover:border-gray-900 bg-gray-50 hover:bg-gray-100 transition-all cursor-pointer overflow-hidden"
-              >
-                {images[key] ? (
-                  <img
-                    src={URL.createObjectURL(images[key])}
-                    alt="Room preview"
-                    className="w-full h-full object-cover rounded-xl"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-1 text-gray-600">
-                    <ImagePlus className="h-6 w-6 opacity-80" />
-                    <span className="text-xs font-semibold">Upload Image</span>
-                  </div>
-                )}
+            {slots.map((slot, index) => (
+              <div key={index} className="relative">
+                <label
+                  htmlFor={`roomImage${index}`}
+                  className="flex flex-col items-center justify-center h-28 rounded-xl border-2 border-dashed border-gray-300 hover:border-gray-900 bg-gray-50 hover:bg-gray-100 transition-all cursor-pointer overflow-hidden"
+                >
+                  {slot ? (
+                    <img
+                      src={slot.url || URL.createObjectURL(slot.file)}
+                      alt="Room preview"
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-gray-600">
+                      <ImagePlus className="h-6 w-6 opacity-80" />
+                      <span className="text-xs font-semibold">Upload Image</span>
+                    </div>
+                  )}
 
-                <input
-                  type="file"
-                  accept="image/*"
-                  id={`roomImage${key}`}
-                  hidden
-                  onChange={(e) =>
-                    setImages({ ...images, [key]: e.target.files[0] })
-                  }
-                />
-              </label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    id={`roomImage${index}`}
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) setSlot(index, { file });
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                {slot && (
+                  <button
+                    type="button"
+                    onClick={() => setSlot(index, null)}
+                    aria-label="Remove photo"
+                    className="absolute -top-2 -right-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-gray-900 text-white shadow"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -193,14 +258,13 @@ const AddRoom = () => {
               </select>
             </div>
 
-            {/* 🟢 حقل المدخل الجديد الخاص بالمدينة (City) */}
-
             <div>
               <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider mb-1.5">
                 Price per Night ($)
               </label>
               <input
                 type="number"
+                min="1"
                 placeholder="e.g. 150"
                 value={inputs.pricePerNight}
                 onChange={(e) =>
@@ -280,8 +344,8 @@ const AddRoom = () => {
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="flex justify-start">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3">
           <button
             type="submit"
             disabled={loading}
@@ -290,8 +354,23 @@ const AddRoom = () => {
             {loading && (
               <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
             )}
-            {loading ? "Publishing Room..." : "Publish Room"}
+            {isEdit
+              ? loading
+                ? "Saving..."
+                : "Save Changes"
+              : loading
+                ? "Publishing Room..."
+                : "Publish Room"}
           </button>
+          {isEdit && (
+            <button
+              type="button"
+              onClick={() => navigate("/owner/list-room")}
+              className="px-6 py-3 rounded-full border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </form>
     </div>

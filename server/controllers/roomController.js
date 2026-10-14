@@ -98,6 +98,114 @@ export const createRoom = async (req, res) => {
   }
 };
 
+// by claude: edit a room (owner only). Photos: keep some existing ones + add new ones, 1 to 4 in total.
+export const updateRoom = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const room = await prisma.room.findUnique({
+      where: { id },
+      include: { hotel: { select: { ownerId: true } } },
+    });
+    if (!room) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Room not found" });
+    }
+    if (room.hotel.ownerId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized. You can only edit your own rooms.",
+      });
+    }
+
+    const parseJson = (value, fallback) => {
+      try {
+        return typeof value === "string" ? JSON.parse(value) : (value ?? fallback);
+      } catch {
+        return fallback;
+      }
+    };
+
+    const validationResult = createRoomSchema.safeParse({
+      ...req.body,
+      amenities: parseJson(req.body.amenities, []),
+    });
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: validationResult.error.issues[0].message,
+      });
+    }
+    const { roomType, pricePerNight, description, amenities } =
+      validationResult.data;
+
+    // only photos that really belong to this room can be kept
+    const requestedKeep = parseJson(req.body.keepImages, []);
+    const keepImages = Array.isArray(requestedKeep)
+      ? room.images.filter((url) => requestedKeep.includes(url))
+      : [];
+    const newFiles = req.files || [];
+
+    const total = keepImages.length + newFiles.length;
+    if (total < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "A room needs at least one image",
+      });
+    }
+    if (total > 4) {
+      return res.status(400).json({
+        success: false,
+        message: "A room can have at most 4 images",
+      });
+    }
+
+    const uploaded = await Promise.all(
+      newFiles.map(async (file) => {
+        const response = await cloudinary.uploader.upload(file.path);
+        return response.secure_url;
+      }),
+    );
+
+    await prisma.room.update({
+      where: { id },
+      data: {
+        roomType,
+        pricePerNight,
+        description,
+        amenities,
+        images: [...keepImages, ...uploaded],
+      },
+    });
+
+    // delete the photos the owner removed (best effort, same publicId logic as deleteRoom)
+    const removed = room.images.filter((url) => !keepImages.includes(url));
+    await Promise.all(
+      removed.map(async (imgUrl) => {
+        try {
+          const publicId = imgUrl.split("/").pop().split(".")[0];
+          await cloudinary.uploader.destroy(publicId);
+        } catch (imgErr) {
+          console.error("Error deleting image from cloudinary:", imgErr);
+        }
+      }),
+    );
+
+    return res.json({ success: true, message: "Room updated successfully" });
+  } catch (error) {
+    console.error("Update room error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update room",
+    });
+  } finally {
+    await Promise.all(
+      (req.files || []).map((f) => fs.unlink(f.path).catch(() => {})),
+    );
+  }
+};
+
 export const deleteRoom = async (req, res) => {
   try {
     const { id } = req.params;

@@ -301,7 +301,12 @@ export const getHotelBooking = async (req, res) => {
   }
 };
 
-// by claude: cancel a booking (guest: only unpaid ones, hotel owner: any active one)
+// by claude: cancel a booking.
+// - unpaid booking: guest or hotel owner can cancel
+// - paid booking (Stripe): the guest can cancel (full refund) if check-in is more than
+//   FREE_CANCELLATION_HOURS away; the hotel owner can always cancel (full refund)
+const FREE_CANCELLATION_HOURS = 48;
+
 export const cancelBooking = async (req, res) => {
   try {
     const { id } = req.params;
@@ -341,12 +346,39 @@ export const cancelBooking = async (req, res) => {
       });
     }
 
-    // by claude: no automatic refund yet, so a guest can't cancel a paid booking
-    if (!isHotelOwner && booking.status === "CONFIRMED") {
-      return res.status(400).json({
-        success: false,
-        message: "This booking is already paid. Please contact the hotel.",
-      });
+    const isPaid = booking.status === "CONFIRMED";
+
+    // a guest can only cancel a paid booking with enough notice
+    if (isPaid && !isHotelOwner) {
+      const hoursLeft =
+        (new Date(booking.checkInDate).getTime() - Date.now()) / 36e5;
+      if (hoursLeft < FREE_CANCELLATION_HOURS) {
+        return res.status(400).json({
+          success: false,
+          message: `Free cancellation is only possible more than ${FREE_CANCELLATION_HOURS} hours before check-in. Please contact the hotel.`,
+        });
+      }
+    }
+
+    // refund first: if Stripe fails we do NOT cancel, so money and booking stay consistent
+    let refunded = false;
+    if (isPaid && booking.paymentMethod === "Stripe") {
+      if (booking.paymentIntentId) {
+        try {
+          const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY);
+          await stripeInstance.refunds.create(
+            { payment_intent: booking.paymentIntentId },
+            { idempotencyKey: `refund_${booking.id}` },
+          );
+          refunded = true;
+        } catch (stripeError) {
+          console.error("Stripe refund error:", stripeError.message);
+          return res.status(502).json({
+            success: false,
+            message: "The refund failed, the booking was not cancelled. Please try again.",
+          });
+        }
+      }
     }
 
     await prisma.booking.update({
@@ -354,14 +386,18 @@ export const cancelBooking = async (req, res) => {
       data: { status: "CANCELLED" },
     });
 
-    const needsRefund =
-      booking.status === "CONFIRMED" && booking.paymentMethod === "Stripe";
+    // old paid bookings (made before refunds existed) have no paymentIntentId
+    const needsManualRefund =
+      isPaid && booking.paymentMethod === "Stripe" && !refunded;
 
     return res.json({
       success: true,
-      message: needsRefund
-        ? "Booking cancelled. Remember to refund the guest from your Stripe dashboard."
-        : "Booking cancelled successfully",
+      refunded,
+      message: refunded
+        ? "Booking cancelled and the payment was refunded (5-10 business days to appear on the card)."
+        : needsManualRefund
+          ? "Booking cancelled. This payment can't be refunded automatically, please refund it from your Stripe dashboard."
+          : "Booking cancelled successfully",
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom"; // by claude
+import { Pencil } from "lucide-react"; // by claude
 import Title from "../../components/common/Title";
 import API from "../../lib/axios";
 import { useAuth, useUser } from "@clerk/clerk-react";
@@ -195,12 +197,22 @@ const ListRoom = () => {
                   </td>
 
                   <td className="py-3 px-2 sm:px-4 border-t border-gray-200 text-center">
-                    <button
-                      onClick={() => handleDeleteRoom(room.id)}
-                      className="text-red-600 hover:text-red-800 text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-full bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      {/* by claude: edit button */}
+                      <Link
+                        to={`/owner/edit-room/${room.id}`}
+                        className="inline-flex items-center gap-1 text-gray-800 hover:text-black text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => handleDeleteRoom(room.id)}
+                        className="text-red-600 hover:text-red-800 text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-full bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

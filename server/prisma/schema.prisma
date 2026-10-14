@@ -81,6 +81,7 @@ model Booking {
   guests        Int
   status        BookingStatus @default(PENDING)
   paymentMethod String        @default("Pay At Hotel")
+  paymentIntentId String?     // by claude: Stripe PaymentIntent id, needed to refund a paid booking
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }

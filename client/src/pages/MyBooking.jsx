@@ -9,6 +9,7 @@ import FadeIn from "../components/common/FadeIn"; // by claude
 const MyBooking = () => {
   const { userId, getToken } = useAuth();
   const [bookings, setBookings] = useState([]);
+  const [now] = useState(() => Date.now()); // by claude: "current time" for the cancel rule
 
   useEffect(() => {
     const fetchUserBookings = async () => {
@@ -47,9 +48,14 @@ const MyBooking = () => {
       toast.error(error.message);
     }
   };
-  // by claude: cancel an unpaid booking
-  const handleCancel = async (bookingId) => {
-    if (!window.confirm("Cancel this booking?")) return;
+  // by claude: a paid booking can be cancelled (with refund) if check-in is > 48h away
+  const canCancelPaid = (booking) =>
+    booking.status === "CONFIRMED" &&
+    new Date(booking.checkInDate).getTime() - now > 48 * 36e5;
+
+  // by claude: cancel a booking (paid ones are refunded by the server)
+  const handleCancel = async (bookingId, isPaid = false) => {
+    if (!window.confirm(isPaid ? "Cancel this booking? Your payment will be refunded." : "Cancel this booking?")) return;
     try {
       const { data } = await API.patch(
         `/api/bookings/${bookingId}/cancel`,
@@ -133,6 +139,15 @@ const MyBooking = () => {
                 <span className={`rounded-full px-3 py-1 text-xs font-medium ${st.cls}`}>
                   {st.label}
                 </span>
+                {/* by claude: paid + free cancellation window -> cancel with refund */}
+                {canCancelPaid(booking) && (
+                  <button
+                    onClick={() => handleCancel(booking.id, true)}
+                    className="cursor-pointer rounded-full border border-red-300 px-4 py-1.5 text-xs text-red-600 transition-all hover:bg-red-50"
+                  >
+                    Cancel &amp; refund
+                  </button>
+                )}
                 {/* by claude: no pay/cancel once the stay is over */}
                 {booking.status === "PENDING" &&
                   new Date(booking.checkOutDate) >= new Date() && (
