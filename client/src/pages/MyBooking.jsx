@@ -11,26 +11,58 @@ const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [now] = useState(() => Date.now()); // by claude: "current time" for the cancel rule
 
+  // by claude: bookings are loaded 10 at a time ("Load more" asks for the next page)
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // by claude: shared by the first load (effect) and "Load more"
+  const applyPage = (data, pageToLoad) => {
+    setBookings((prev) =>
+      pageToLoad === 1 ? data.bookings : [...prev, ...data.bookings],
+    );
+    setPage(pageToLoad);
+    setHasMore(
+      Boolean(data.pagination) &&
+        data.pagination.page < data.pagination.totalPages,
+    );
+  };
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const { data } = await API.get("/api/bookings/user", {
+        params: { page: page + 1, limit: 10 },
+        headers: { Authorization: `Bearer ${await getToken()}` },
+      });
+      if (data.success) applyPage(data, page + 1);
+      else toast.error(data.message);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUserBookings = async () => {
+    const fetchFirstPage = async () => {
       try {
         const { data } = await API.get("/api/bookings/user", {
+          params: { page: 1, limit: 10 },
           headers: { Authorization: `Bearer ${await getToken()}` },
         });
-        if (data.success) {
-          setBookings(data.bookings);
-        } else {
-          toast.error(data.message);
-        }
+        if (data.success) applyPage(data, 1);
+        else toast.error(data.message);
       } catch (error) {
         toast.error(error.message);
       }
     };
 
     if (userId) {
-      fetchUserBookings();
+      fetchFirstPage();
     }
-  }, [userId, getToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const handlePayment = async (bookingId) => {
     try {
@@ -170,6 +202,17 @@ const MyBooking = () => {
             </FadeIn>
           );
         })}
+
+        {/* by claude: pagination, 10 bookings per page */}
+        {hasMore && (
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="mx-auto mt-2 cursor-pointer rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:opacity-60"
+          >
+            {loadingMore ? "Loading..." : "Load more"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -40,6 +40,10 @@ model Hotel {
   booking Booking[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // by claude: indexes for the lookups we do all the time
+  @@index([ownerId])
+  @@index([city])
 }
 model Room {
   id            String   @id @default(cuid())
@@ -57,6 +61,10 @@ amenities     String[]  @default([])
   booking Booking[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  // by claude
+  @@index([hotelId])
+  @@index([isAvailable, createdAt])
 }
 enum Role {
   user
@@ -85,4 +93,9 @@ model Booking {
   paymentIntentId String?     // by claude: Stripe PaymentIntent id, needed to refund a paid booking
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  // by claude: my bookings, owner dashboard and the availability check
+  @@index([userId, createdAt])
+  @@index([hotelId, createdAt])
+  @@index([roomId, checkInDate, checkOutDate])
 }

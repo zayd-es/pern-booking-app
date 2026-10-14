@@ -207,21 +207,36 @@ export const createBooking = async (req, res) => {
   }
 };
 
+// by claude: ?page=1&limit=10 -> safe numbers (limit is capped so nobody can ask for everything)
+const getPagination = (query, defaultLimit = 10, maxLimit = 50) => {
+  const page = Math.max(1, parseInt(query.page, 10) || 1);
+  const limit = Math.min(maxLimit, Math.max(1, parseInt(query.limit, 10) || defaultLimit));
+  return { page, limit, skip: (page - 1) * limit };
+};
+
 export const getUserBookings = async (req, res) => {
   try {
     const userId = req.user.id;
-    const bookings = await prisma.booking.findMany({
-      where: { userId },
-      include: {
-        room: true,
-        hotel: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { page, limit, skip } = getPagination(req.query);
+
+    const [total, bookings] = await Promise.all([
+      prisma.booking.count({ where: { userId } }),
+      prisma.booking.findMany({
+        where: { userId },
+        include: {
+          room: true,
+          hotel: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+    ]);
 
     return res.status(200).json({
       success: true,
       bookings,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
     return res.status(500).json({
@@ -245,52 +260,55 @@ export const getHotelBooking = async (req, res) => {
       });
     }
 
-    const bookings = await prisma.booking.findMany({
-      where: { hotelId: hotel.id },
-      include: {
-        room: true,
-        hotel: true,
-        user: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
+    const { page, limit, skip } = getPagination(req.query);
+
+    // by claude: stats are computed by the database over ALL bookings,
+    // only the table below is paginated
+    const [totalBookings, confirmed, potential, bookings] = await Promise.all([
+      prisma.booking.count({ where: { hotelId: hotel.id } }),
+      prisma.booking.aggregate({
+        where: { hotelId: hotel.id, status: "CONFIRMED" },
+        _count: true,
+        _sum: { totalPrice: true },
+      }),
+      // cancelled bookings don't count in potential revenue
+      prisma.booking.aggregate({
+        where: { hotelId: hotel.id, status: { not: "CANCELLED" } },
+        _sum: { totalPrice: true },
+      }),
+      prisma.booking.findMany({
+        where: { hotelId: hotel.id },
+        include: {
+          room: true,
+          hotel: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const totalBookings = bookings.length;
-
-    const confirmedBookingsList = bookings.filter((b) => {
-      const status = String(b.status || "").toUpperCase();
-      return status === "CONFIRMED";
-    });
-
-    const confirmedBookings = confirmedBookingsList.length;
-
-    const confirmedRevenue = confirmedBookingsList.reduce(
-      (acc, booking) => acc + (booking.totalPrice || 0),
-      0,
-    );
-
-    // by claude: cancelled bookings don't count in potential revenue
-    const totalRevenue = bookings
-      .filter((b) => b.status !== "CANCELLED")
-      .reduce(
-      (acc, booking) => acc + (booking.totalPrice || 0),
-      0,
-    );
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+    ]);
 
     res.status(200).json({
       success: true,
       dashboardData: {
         totalBookings,
-        confirmedBookings,
-        confirmedRevenue,
-        totalRevenue,
+        confirmedBookings: confirmed._count,
+        confirmedRevenue: confirmed._sum.totalPrice || 0,
+        totalRevenue: potential._sum.totalPrice || 0,
         bookings,
+        pagination: {
+          page,
+          limit,
+          total: totalBookings,
+          totalPages: Math.ceil(totalBookings / limit),
+        },
       },
     });
   } catch (error) {

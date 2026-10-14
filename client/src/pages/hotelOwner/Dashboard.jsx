@@ -20,6 +20,10 @@ const Dashboard = () => {
     totalRevenue: 0,
   });
   const [loading, setLoading] = useState(true);
+  // by claude: bookings table is paginated (10 per page), stats come from the server for ALL bookings
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -27,10 +31,13 @@ const Dashboard = () => {
         setLoading(true);
         const token = await getToken();
         const { data } = await API.get("/api/bookings/hotel", {
+          params: { page: 1, limit: 10 },
           headers: { Authorization: `Bearer ${token}` },
         });
         if (data.success) {
           setDashboardData(data.dashboardData);
+          const p = data.dashboardData.pagination;
+          setHasMore(Boolean(p) && p.page < p.totalPages);
         } else toast.error(data.message || "Failed to load dashboard data");
       } catch (error) {
         console.error("Dashboard fetch error:", error);
@@ -45,6 +52,32 @@ const Dashboard = () => {
       fetchDashboardData();
     }
   }, [isLoaded, user, getToken]);
+
+  // by claude: load the next 10 bookings and add them to the table
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const { data } = await API.get("/api/bookings/hotel", {
+        params: { page: page + 1, limit: 10 },
+        headers: { Authorization: `Bearer ${await getToken()}` },
+      });
+      if (data.success) {
+        setDashboardData((prev) => ({
+          ...prev,
+          bookings: [...prev.bookings, ...data.dashboardData.bookings],
+        }));
+        setPage(page + 1);
+        const p = data.dashboardData.pagination;
+        setHasMore(p.page < p.totalPages);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to load bookings");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // by claude: cancel a booking and update the stats locally
   const handleCancel = async (booking) => {
@@ -231,6 +264,17 @@ const Dashboard = () => {
             </tbody>
           </table>
         </div>
+
+        {/* by claude */}
+        {hasMore && (
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="mt-4 cursor-pointer rounded-full border border-gray-300 px-6 py-2 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 disabled:opacity-60"
+          >
+            {loadingMore ? "Loading..." : "Load more"}
+          </button>
+        )}
       </div>
     </div>
   );
