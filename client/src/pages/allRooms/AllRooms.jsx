@@ -136,9 +136,9 @@ const AllRooms = () => {
   };
 
   return (
-    <div className="pt-28 md:pt-32 pb-20 px-4 md:px-16 lg:px-24 xl:px-32">
+    <div className="pt-24 sm:pt-28 md:pt-32 pb-16 md:pb-20 px-4 md:px-12 lg:px-16 xl:px-24 2xl:px-32">
       <FadeIn>
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-gray-900">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-gray-900">
           Hotel Rooms
         </h1>
         <p className="mt-2 text-sm md:text-base text-gray-500">
@@ -187,7 +187,7 @@ const AllRooms = () => {
         )}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="mt-5 grid grid-cols-1 gap-x-5 gap-y-8 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {roomsLoading
           ? Array.from({ length: 8 }, (_, i) => <RoomCardSkeleton key={i} />)
           : pageRooms.map((room, index) => (
@@ -213,7 +213,7 @@ const AllRooms = () => {
           page={currentPage}
           totalPages={totalPages}
           onChange={goToPage}
-          className="mt-12"
+          className="mt-10 sm:mt-12"
         />
       )}
     </div>

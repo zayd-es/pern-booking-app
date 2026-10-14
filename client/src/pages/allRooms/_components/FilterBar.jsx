@@ -11,32 +11,54 @@ const chipClass = (active) =>
       : "border-gray-200 bg-white text-gray-700 hover:border-gray-400"
   }`;
 
-// a button that opens a small panel under it (closes on outside click / Escape)
-const Dropdown = ({ label, count = 0, children, width = "w-72" }) => {
+// a button that opens a small panel under it (closes on outside click / Escape / scroll / resize).
+// The panel is position:fixed and clamped to the screen, so it never overflows on a phone and is
+// not clipped by the horizontally scrollable bar.
+const PANEL_WIDTH = 288; // 18rem
+
+const Dropdown = ({ label, count = 0, children }) => {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: PANEL_WIDTH });
+  const wrapRef = useRef(null);
+  const buttonRef = useRef(null);
+
+  const toggle = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const width = Math.min(PANEL_WIDTH, window.innerWidth - 32);
+      const left = Math.max(16, Math.min(rect.left, window.innerWidth - width - 16));
+      setPos({ top: rect.bottom + 8, left, width });
+    }
+    setOpen((v) => !v);
+  };
 
   useEffect(() => {
     if (!open) return;
+    const close = () => setOpen(false);
     const onClick = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) close();
     };
-    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    const onKey = (e) => e.key === "Escape" && close();
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", close, { passive: true });
+    window.addEventListener("resize", close);
     return () => {
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", close);
+      window.removeEventListener("resize", close);
     };
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={wrapRef} className="shrink-0">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         aria-expanded={open}
-        className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors ${
+        className={`inline-flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm transition-colors ${
           count > 0 || open
             ? "border-gray-900 text-gray-900"
             : "border-gray-200 text-gray-700 hover:border-gray-400"
@@ -54,7 +76,8 @@ const Dropdown = ({ label, count = 0, children, width = "w-72" }) => {
       </button>
       {open && (
         <div
-          className={`absolute left-0 top-full z-40 mt-2 max-w-[90vw] rounded-2xl border border-gray-200 bg-white p-4 shadow-lg ${width}`}
+          style={{ top: pos.top, left: pos.left, width: pos.width }}
+          className="fixed z-40 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg"
         >
           {children}
         </div>
@@ -81,8 +104,9 @@ const FilterBar = ({
   const maxPrice = filters.maxPrice ?? bounds.max;
   const priceActive = filters.minPrice !== null || filters.maxPrice !== null;
 
+  // phones: one horizontally scrollable row (no scrollbar); sm and up: wraps
   return (
-    <div className="flex flex-wrap items-center gap-2.5">
+    <div className="-mx-4 flex items-center gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
       <Dropdown label="Room type" count={filters.roomType.length}>
         <div className="flex flex-wrap gap-2">
           {roomTypes.map((type) => (
@@ -172,7 +196,7 @@ const FilterBar = ({
         </div>
       </Dropdown>
 
-      <div className="relative">
+      <div className="relative shrink-0">
         <select
           aria-label="Sort rooms"
           value={sort}
@@ -193,7 +217,7 @@ const FilterBar = ({
         <button
           type="button"
           onClick={onClear}
-          className="inline-flex cursor-pointer items-center gap-1 px-2 text-sm text-gray-600 hover:text-gray-900"
+          className="inline-flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap px-2 text-sm text-gray-600 hover:text-gray-900"
         >
           <X className="h-3.5 w-3.5" /> Clear all
         </button>
