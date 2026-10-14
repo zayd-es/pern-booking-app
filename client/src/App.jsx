@@ -9,6 +9,8 @@ import Dashboard from "./pages/hotelOwner/Dashboard";
 import AddRoom from "./pages/hotelOwner/AddRoom";
 import ListRoom from "./pages/hotelOwner/ListRoom";
 import MyHotel from "./pages/hotelOwner/MyHotel"; // by claude
+import Experiences from "./pages/Experiences"; // by claude
+import About from "./pages/About"; // by claude
 import Layout from "./layouts/HotelOwnerLayout";
 import { Toaster } from "react-hot-toast";
 import { useAppStore } from "./store/useAppStore";
@@ -47,7 +49,9 @@ const App = () => {
           <Route path="rooms" element={<AllRooms />} />
           <Route path="rooms/:id" element={<RoomDetails />} />
           <Route path="my-bookings" element={<MyBooking />} />
-          <Route path="my-bookings" element={<MyBooking />} />
+          {/* by claude: new pages (also removed the duplicated my-bookings route) */}
+          <Route path="experiences" element={<Experiences />} />
+          <Route path="about" element={<About />} />
           <Route path="/loader/:nextUrl" element={<Loader />} />
         </Route>
 

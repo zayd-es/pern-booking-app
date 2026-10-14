@@ -1,5 +1,6 @@
 // by claude: footer redesigned (minimal, top border, small uppercase headings)
 import Logo from "./Logo"; // by claude
+import { Link } from "react-router-dom"; // by claude
 import { ArrowRight } from "lucide-react"; // by claude
 import { FaInstagram, FaFacebookF, FaXTwitter, FaLinkedinIn } from "react-icons/fa6"; // by claude (lucide has no brand icons)
 
@@ -36,7 +37,18 @@ const Footer = () => {
         <div>
           <p className={headingClass}>Company</p>
           <ul className="mt-4 flex flex-col gap-2.5 text-sm">
-            {["About", "Careers", "Press", "Blog", "Partners"].map((item) => (
+            {/* by claude: About + Experiences are real pages now */}
+            <li>
+              <Link to="/about" onClick={() => window.scrollTo(0, 0)} className={linkClass}>
+                About
+              </Link>
+            </li>
+            <li>
+              <Link to="/experiences" onClick={() => window.scrollTo(0, 0)} className={linkClass}>
+                Experiences
+              </Link>
+            </li>
+            {["Careers", "Press", "Blog"].map((item) => (
               <li key={item}>
                 <a href="#" className={linkClass}>
                   {item}

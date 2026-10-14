@@ -30,9 +30,8 @@ export const Navbar = () => {
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Hotels", path: "/rooms" },
-    // "Experience" / "About" have no page yet, they stay as placeholders
-    { name: "Experience", path: "/", placeholder: true },
-    { name: "About", path: "/", placeholder: true },
+    { name: "Experiences", path: "/experiences" }, // by claude
+    { name: "About", path: "/about" }, // by claude
     ...(user ? [{ name: "My Bookings", path: "/my-bookings" }] : []),
   ];
 
