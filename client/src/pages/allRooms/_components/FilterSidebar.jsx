@@ -148,8 +148,10 @@ const FilterSidebar = ({
     </div>
   );
 
+  // by claude: the sticky panel is capped to the screen height and scrolls inside,
+  // so every filter stays reachable while the rooms list scrolls separately
   return (
-    <aside className="w-full lg:w-80 lg:sticky lg:top-28 max-lg:mb-6 lg:mt-16 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+    <aside className="w-full lg:w-80 lg:sticky lg:top-24 max-lg:mb-6 lg:mt-16 max-lg:overflow-hidden lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 bg-white">
       <div className="flex items-center justify-between px-5 py-3.5">
         <p className="flex items-center gap-2 text-base font-semibold text-gray-900">
           <SlidersHorizontal className="h-4 w-4" />
