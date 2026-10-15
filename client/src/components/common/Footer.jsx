@@ -1,6 +1,7 @@
 // by claude: footer redesigned (minimal, top border, small uppercase headings)
 import Logo from "./Logo"; // by claude
-import { Link } from "react-router-dom"; // by claude
+import { Link, useNavigate } from "react-router-dom"; // by claude
+import { useAppStore } from "../../store/useAppStore"; // by claude
 import { ArrowRight } from "lucide-react"; // by claude
 import { FaInstagram, FaFacebookF, FaXTwitter, FaLinkedinIn } from "react-icons/fa6"; // by claude (lucide has no brand icons)
 
@@ -9,6 +10,9 @@ const headingClass =
 const linkClass = "hover:text-gray-900 transition-colors";
 
 const Footer = () => {
+  const navigate = useNavigate(); // by claude
+  const isOwner = useAppStore((state) => state.isOwner); // by claude
+  const setShowHotelReg = useAppStore((state) => state.setShowHotelReg); // by claude
   return (
     <footer className="border-t border-gray-200 text-gray-500 pt-12 px-6 md:px-16 lg:px-24 xl:px-32">
       <div className="flex flex-wrap justify-between gap-10 md:gap-6">
@@ -78,24 +82,17 @@ const Footer = () => {
         </div>
 
         <div className="max-w-80">
-          <p className={headingClass}>Stay updated</p>
+          <p className={headingClass}>For hotel owners</p>
           <p className="mt-4 text-sm">
-            Subscribe to our newsletter for inspiration and special offers.
+            List your hotel or riad and start receiving bookings.
           </p>
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            className="flex items-center mt-4"
+          {/* by claude: replaced the fake newsletter form */}
+          <button
+            onClick={() => (isOwner ? navigate("/owner") : setShowHotelReg(true))}
+            className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-full bg-gray-900 px-5 py-2 text-sm text-white transition-colors hover:bg-black"
           >
-            <input
-              type="email"
-              className="bg-white rounded-l-full border border-gray-300 h-10 px-4 text-sm outline-none focus:border-gray-900 transition-colors"
-              placeholder="Your email"
-              required
-            />
-            <button className="flex items-center justify-center bg-gray-900 hover:bg-black h-10 w-11 rounded-r-full cursor-pointer transition-colors">
-              <ArrowRight className="h-4 w-4 text-white" />
-            </button>
-          </form>
+            {isOwner ? "Dashboard" : "List your hotel"} <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
