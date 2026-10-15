@@ -115,6 +115,9 @@ model Review {
   bookingId String   @unique
   booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  editedAt     DateTime? // by claude: set when the guest edits the review
+  ownerReply   String?   // by claude: public answer of the hotel owner
+  ownerReplyAt DateTime? // by claude
 
   @@index([hotelId, createdAt])
   @@index([userId])

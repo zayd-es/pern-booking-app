@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { MapPin, ArrowRight } from "lucide-react";
 import API from "../lib/axios";
+import { useAuth } from "@clerk/clerk-react"; // by claude
+import toast from "react-hot-toast"; // by claude
+import ReviewModal from "../components/common/ReviewModal"; // by claude
 import { useAppStore } from "../store/useAppStore";
 import FadeIn from "../components/common/FadeIn";
 import Skeleton from "../components/common/Skeleton";
@@ -22,15 +25,43 @@ const HotelDetails = () => {
   const [reviews, setReviews] = useState([]);
   const [reviewPage, setReviewPage] = useState(1);
   const [reviewPages, setReviewPages] = useState(1);
+  const { isSignedIn, getToken } = useAuth(); // by claude
+  const [canReply, setCanReply] = useState(false); // by claude: viewer owns this hotel
+  const [editing, setEditing] = useState(null); // by claude: my review being edited
+  const [replyingId, setReplyingId] = useState(null); // by claude
+  const [replyText, setReplyText] = useState(""); // by claude
+
+  // by claude: owner publishes (or removes, with empty text) the answer to a review
+  const saveReply = async (reviewId) => {
+    try {
+      const { data } = await API.patch(
+        `/api/reviews/${reviewId}/reply`,
+        { reply: replyText },
+        { headers: { Authorization: `Bearer ${await getToken()}` } },
+      );
+      if (data.success) {
+        toast.success(data.message);
+        setReviews((prev) =>
+          prev.map((r) => (r.id === reviewId ? { ...r, ...data.review } : r)),
+        );
+        setReplyingId(null);
+      } else toast.error(data.message);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to save the reply");
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
     const loadReviews = async () => {
       try {
+        const token = isSignedIn ? await getToken() : null; // by claude: optional, for isMine / canReply
         const { data } = await API.get(`/api/reviews/hotel/${id}`, {
           params: { page: reviewPage, limit: 5 },
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
         if (cancelled || !data.success) return;
+        setCanReply(!!data.canReply);
         setReviews(data.reviews);
         setReviewPages(data.pagination.totalPages || 1);
       } catch {
@@ -41,7 +72,8 @@ const HotelDetails = () => {
     return () => {
       cancelled = true;
     };
-  }, [id, reviewPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, reviewPage, isSignedIn]);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,12 +242,65 @@ const HotelDetails = () => {
                     <StarRating rating={review.rating} />
                     <span className="text-xs text-gray-400">
                       {new Date(review.createdAt).toLocaleDateString()}
+                      {review.editedAt && " (edited)"}
                     </span>
+                    {review.isMine && (
+                      <button
+                        onClick={() => setEditing(review)}
+                        className="cursor-pointer text-xs text-gray-500 underline"
+                      >
+                        Edit
+                      </button>
+                    )}
                   </div>
                   {review.comment && (
                     <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-gray-600">
                       {review.comment}
                     </p>
+                  )}
+                  {/* by claude: answer of the hotel */}
+                  {review.ownerReply && replyingId !== review.id && (
+                    <div className="mt-3 rounded-xl bg-gray-50 p-3 text-sm">
+                      <p className="font-medium text-gray-900">Response from the hotel</p>
+                      <p className="mt-1 whitespace-pre-line text-gray-600">{review.ownerReply}</p>
+                    </div>
+                  )}
+                  {canReply && replyingId !== review.id && (
+                    <button
+                      onClick={() => {
+                        setReplyingId(review.id);
+                        setReplyText(review.ownerReply || "");
+                      }}
+                      className="mt-2 cursor-pointer text-xs text-gray-500 underline"
+                    >
+                      {review.ownerReply ? "Edit reply" : "Reply"}
+                    </button>
+                  )}
+                  {replyingId === review.id && (
+                    <div className="mt-3">
+                      <textarea
+                        rows={3}
+                        maxLength={500}
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Write a public reply (leave empty to remove it)"
+                        className="w-full resize-none rounded-xl border border-gray-300 p-3 text-sm outline-none focus:border-gray-900"
+                      />
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          onClick={() => saveReply(review.id)}
+                          className="cursor-pointer rounded-full bg-gray-900 px-4 py-1.5 text-xs text-white hover:bg-black"
+                        >
+                          Save reply
+                        </button>
+                        <button
+                          onClick={() => setReplyingId(null)}
+                          className="cursor-pointer rounded-full border border-gray-300 px-4 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -230,6 +315,20 @@ const HotelDetails = () => {
           className="mt-4"
         />
       </section>
+
+      {/* by claude: edit my own review */}
+      {editing && (
+        <ReviewModal
+          review={editing}
+          hotelName={hotel.name}
+          onClose={() => setEditing(null)}
+          onDone={(reviewId, updated) =>
+            setReviews((prev) =>
+              prev.map((r) => (r.id === reviewId ? { ...r, ...updated } : r)),
+            )
+          }
+        />
+      )}
 
       <section className="mt-12">
         <FadeIn>

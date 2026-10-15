@@ -7,11 +7,12 @@ import API from "../../lib/axios";
 
 const LABELS = ["", "Poor", "Fair", "Good", "Very good", "Excellent"];
 
-const ReviewModal = ({ booking, onClose, onDone }) => {
+// by claude: pass `review` (+ hotelName) instead of `booking` to edit an existing review
+const ReviewModal = ({ booking, review, hotelName, onClose, onDone }) => {
   const { getToken } = useAuth();
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState(review?.rating || 0);
   const [hover, setHover] = useState(0);
-  const [comment, setComment] = useState("");
+  const [comment, setComment] = useState(review?.comment || "");
   const [saving, setSaving] = useState(false);
 
   // Escape closes the popup
@@ -26,14 +27,13 @@ const ReviewModal = ({ booking, onClose, onDone }) => {
     if (!rating) return toast.error("Please choose a rating");
     setSaving(true);
     try {
-      const { data } = await API.post(
-        "/api/reviews",
-        { bookingId: booking.id, rating, comment },
-        { headers: { Authorization: `Bearer ${await getToken()}` } },
-      );
+      const headers = { Authorization: `Bearer ${await getToken()}` };
+      const { data } = review
+        ? await API.patch(`/api/reviews/${review.id}`, { rating, comment }, { headers })
+        : await API.post("/api/reviews", { bookingId: booking.id, rating, comment }, { headers });
       if (data.success) {
         toast.success(data.message);
-        onDone(booking.id, data.review);
+        onDone(review ? review.id : booking.id, data.review);
         onClose();
       } else {
         toast.error(data.message);
@@ -68,8 +68,8 @@ const ReviewModal = ({ booking, onClose, onDone }) => {
           <X className="h-4 w-4" />
         </button>
 
-        <h2 className="text-xl font-semibold text-gray-900">Rate your stay</h2>
-        <p className="mt-1 text-sm text-gray-500">{booking.hotel.name}</p>
+        <h2 className="text-xl font-semibold text-gray-900">{review ? "Edit your review" : "Rate your stay"}</h2>
+        <p className="mt-1 text-sm text-gray-500">{hotelName || booking.hotel.name}</p>
 
         <div
           className="mt-5 flex items-center gap-1"
@@ -116,7 +116,7 @@ const ReviewModal = ({ booking, onClose, onDone }) => {
           disabled={saving}
           className="mt-3 w-full cursor-pointer rounded-full bg-gray-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black disabled:opacity-60"
         >
-          {saving ? "Sending..." : "Send review"}
+          {saving ? "Sending..." : review ? "Save changes" : "Send review"}
         </button>
       </form>
     </div>

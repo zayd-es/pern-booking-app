@@ -105,7 +105,10 @@ export const getHotelReviews = async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 5));
 
-    const [total, reviews, ratings] = await Promise.all([
+    // by claude: optional login (the page is public) -> isMine / canReply flags
+    const viewerId = req.auth?.()?.userId || null;
+
+    const [total, reviews, ratings, hotel] = await Promise.all([
       prisma.review.count({ where: { hotelId } }),
       prisma.review.findMany({
         where: { hotelId },
@@ -117,15 +120,23 @@ export const getHotelReviews = async (req, res) => {
           rating: true,
           comment: true,
           createdAt: true,
+          editedAt: true, // by claude
+          ownerReply: true, // by claude
+          ownerReplyAt: true, // by claude
+          userId: true, // by claude: only used below to compute isMine, removed before sending
           user: { select: { username: true, image: true } }, // no email
         },
       }),
       getHotelRatings([hotelId]),
+      prisma.hotel.findUnique({ where: { id: hotelId }, select: { ownerId: true } }),
     ]);
+
+    const canReply = !!viewerId && hotel?.ownerId === viewerId; // by claude
 
     return res.json({
       success: true,
-      reviews,
+      canReply,
+      reviews: reviews.map(({ userId, ...r }) => ({ ...r, isMine: userId === viewerId })), // by claude
       rating: ratings[hotelId] || { average: 0, count: 0 },
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
@@ -147,6 +158,77 @@ export const deleteReview = async (req, res) => {
     }
     await prisma.review.delete({ where: { id: review.id } });
     return res.json({ success: true, message: "Review deleted" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// by claude: a guest edits their own review (rating / comment)
+export const updateReview = async (req, res) => {
+  try {
+    const parsed = reviewSchema.omit({ bookingId: true }).safeParse(req.body);
+    if (!parsed.success) {
+      return res
+        .status(400)
+        .json({ success: false, message: parsed.error.issues[0].message });
+    }
+    const review = await prisma.review.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!review || review.userId !== req.user.id) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Review not found" });
+    }
+    const updated = await prisma.review.update({
+      where: { id: review.id },
+      data: {
+        rating: parsed.data.rating,
+        comment: parsed.data.comment || null,
+        editedAt: new Date(),
+      },
+    });
+    return res.json({ success: true, message: "Review updated", review: updated });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// by claude: the owner of the hotel answers a review (empty reply removes the answer)
+const replySchema = z.object({
+  reply: z.string().trim().max(500, "Reply must be at most 500 characters"),
+});
+
+export const replyToReview = async (req, res) => {
+  try {
+    const parsed = replySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res
+        .status(400)
+        .json({ success: false, message: parsed.error.issues[0].message });
+    }
+    const review = await prisma.review.findUnique({
+      where: { id: req.params.id },
+      include: { hotel: { select: { ownerId: true } } },
+    });
+    if (!review || review.hotel.ownerId !== req.user.id) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Review not found" });
+    }
+    const reply = parsed.data.reply;
+    const updated = await prisma.review.update({
+      where: { id: review.id },
+      data: reply
+        ? { ownerReply: reply, ownerReplyAt: new Date() }
+        : { ownerReply: null, ownerReplyAt: null },
+      select: { id: true, ownerReply: true, ownerReplyAt: true },
+    });
+    return res.json({
+      success: true,
+      message: reply ? "Reply published" : "Reply removed",
+      review: updated,
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

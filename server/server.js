@@ -78,7 +78,9 @@ const writeLimiter = rateLimit({
 });
 app.use("/api/bookings/book", writeLimiter);
 app.use("/api/bookings/stripe-payment", writeLimiter);
-app.post("/api/reviews", writeLimiter); // by claude (only creating, reading stays unlimited)
+app.post("/api/reviews", writeLimiter);
+app.patch("/api/reviews/:id", writeLimiter);
+app.patch("/api/reviews/:id/reply", writeLimiter); // by claude // by claude (only creating, reading stays unlimited)
 
 app.get("/", (req, res) => res.send("API IS WORKING"));
 app.use("/api/users", userRouter);
