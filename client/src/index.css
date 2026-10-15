@@ -10,3 +10,46 @@
 .font-playfair {
   font-family: Playfair !important;
 }
+
+/* by claude: DARK MODE. Components use the light palette (white, gray-*), so in dark mode we
+   re-map those color variables instead of editing every component. `gray-900` becomes the light
+   text color and `white` the dark surface, so "bg-gray-900 text-white" buttons stay readable. */
+:root.dark {
+  color-scheme: dark;
+  --color-white: #0f1115;
+  --color-gray-50: #14171c;
+  --color-gray-100: #1a1e25;
+  --color-gray-200: #272c35;
+  --color-gray-300: #353b46;
+  --color-gray-400: #7b8494;
+  --color-gray-500: #9aa3b2;
+  --color-gray-600: #b4bcc9;
+  --color-gray-700: #cdd3dc;
+  --color-gray-800: #e5e8ed;
+  --color-gray-900: #f3f4f6;
+  --color-neutral-700: #cdd3dc;
+  --color-neutral-900: #f3f4f6;
+  --color-slate-300: #353b46;
+  --color-red-50: #2d1517;
+  --color-red-100: #3a1a1d;
+  --color-red-200: #5c2a2e;
+  --color-red-300: #7f3a3f;
+  --color-red-600: #f87171;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-green-50: #10281c;
+  --color-green-100: #14341f;
+  --color-green-600: #4ade80;
+  --color-green-700: #86efac;
+  --color-amber-50: #2d2410;
+  --color-amber-100: #3a2e12;
+  --color-amber-700: #fcd34d;
+}
+:root.dark body {
+  background-color: var(--color-white);
+  color: var(--color-gray-900);
+}
+/* black hover on dark buttons would clash with the inverted (light) button color */
+:root.dark .hover\:bg-black:hover {
+  background-color: #ffffff;
+}

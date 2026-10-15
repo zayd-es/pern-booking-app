@@ -53,7 +53,7 @@ const App = () => {
   return (
     <div>
       <ScrollToTop />
-      <Toaster />
+      <Toaster toastOptions={{ style: { background: "var(--color-white)", color: "var(--color-gray-900)", border: "1px solid var(--color-gray-200)" } }} /> {/* by claude: follows dark mode */}
       {showHotelReg && <HotelReg />}
       <Routes>
         <Route path="/" element={<MainLayout />}>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import Logo from "./Logo"; // by claude
+import ThemeToggle from "./ThemeToggle"; // by claude
 import { Menu, X } from "lucide-react"; // by claude
 import { useClerk, useUser, UserButton } from "@clerk/clerk-react";
 import { useAppStore } from "../../store/useAppStore";
@@ -90,6 +91,7 @@ export const Navbar = () => {
 
       {/* Desktop right */}
       <div className="hidden lg:flex items-center gap-3">
+        <ThemeToggle />
         {user && (
           <button
             onClick={handleOwnerButton}
@@ -112,7 +114,8 @@ export const Navbar = () => {
       </div>
 
       {/* Mobile / tablet top bar: Login (or avatar) stays visible, links are in the menu */}
-      <div className="flex items-center gap-3 lg:hidden">
+      <div className="flex items-center gap-2 sm:gap-3 lg:hidden">
+        <ThemeToggle />
         {user ? (
           <UserButton />
         ) : (

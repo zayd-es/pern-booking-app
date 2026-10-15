@@ -8,6 +8,15 @@
   <title>Zayd | Book hotels and riads in Morocco</title>
   <meta name="description" content="Find and book hotels, riads and desert camps across Morocco with Zayd." />
   <meta name="theme-color" content="#ffffff" />
+  <script>
+    // by claude: apply the saved theme (or the system one) before React loads, no white flash
+    try {
+      var t = localStorage.getItem("theme");
+      if (t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+        document.documentElement.classList.add("dark");
+      }
+    } catch (e) {}
+  </script>
 </head>
 
 <body>
