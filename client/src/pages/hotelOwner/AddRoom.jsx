@@ -265,6 +265,7 @@ const AddRoom = () => {
               <input
                 type="number"
                 min="1"
+                step="1" // by claude: whole numbers only
                 placeholder="e.g. 150"
                 value={inputs.pricePerNight}
                 onChange={(e) =>

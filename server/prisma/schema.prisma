@@ -55,7 +55,7 @@ model Room {
 
   roomType      String
   description   String?
-  pricePerNight Float
+  pricePerNight Int // by claude: whole currency units (no float rounding errors)
 amenities     String[]  @default([])
   images        String[]
   isAvailable   Boolean  @default(true)
@@ -88,7 +88,7 @@ model Booking {
   hotel         Hotel         @relation(fields: [hotelId], references: [id])
   checkInDate   DateTime
   checkOutDate  DateTime
-  totalPrice    Float
+  totalPrice    Int // by claude: whole currency units
   guests        Int
   status        BookingStatus @default(PENDING)
   paymentMethod String        @default("Pay At Hotel")

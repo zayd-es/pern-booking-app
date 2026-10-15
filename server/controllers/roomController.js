@@ -8,6 +8,7 @@ const createRoomSchema = z.object({
   roomType: z.string().min(1, "Room type is required"),
   pricePerNight: z.coerce
     .number({ error: "Price must be a valid number" })
+    .int("Price must be a whole number") // by claude: prices are stored as whole units (Int)
     .positive("Price per night must be greater than 0"),
   description: z.string().optional().default(""),
   amenities: z.array(z.string()).default([]),
