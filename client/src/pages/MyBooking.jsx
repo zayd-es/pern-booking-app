@@ -6,11 +6,13 @@ import API from "../lib/axios";
 import toast from "react-hot-toast";
 import FadeIn from "../components/common/FadeIn"; // by claude
 import Pagination from "../components/common/Pagination"; // by claude
+import Skeleton from "../components/common/Skeleton"; // by claude
 import ReviewModal from "../components/common/ReviewModal"; // by claude
 
 const MyBooking = () => {
   const { userId, getToken } = useAuth();
   const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true); // by claude: no "no bookings" flash while loading
   const [now] = useState(() => Date.now()); // by claude: "current time" for the cancel rule
   const [reviewing, setReviewing] = useState(null); // by claude: booking being reviewed
 
@@ -61,6 +63,8 @@ const MyBooking = () => {
         else toast.error(data.message);
       } catch (error) {
         toast.error(error.message);
+      } finally {
+        setLoading(false); // by claude
       }
     };
 
@@ -131,7 +135,11 @@ const MyBooking = () => {
       />
 
       <div className="mt-8 grid max-w-5xl gap-4">
-        {bookings.length === 0 && (
+        {/* by claude: skeleton cards while the first page loads */}
+        {loading &&
+          [0, 1, 2].map((n) => <Skeleton key={n} className="h-32 w-full rounded-2xl" />)}
+
+        {!loading && bookings.length === 0 && (
           <p className="py-10 text-gray-500">You have no bookings yet.</p>
         )}
 

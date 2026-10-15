@@ -24,8 +24,9 @@ const confirmBooking = async (bookingId, paymentIntentId) => {
   }
   if (booking.status === "CONFIRMED") return;
 
-  await prisma.booking.update({
-    where: { id: bookingId },
+  // by claude: atomic PENDING -> CONFIRMED, so when both Stripe events arrive together only one sends the emails
+  const { count } = await prisma.booking.updateMany({
+    where: { id: bookingId, status: "PENDING" },
     // by claude: keep the PaymentIntent id so the booking can be refunded later
     data: {
       status: "CONFIRMED",
@@ -33,6 +34,7 @@ const confirmBooking = async (bookingId, paymentIntentId) => {
       paymentIntentId: paymentIntentId || null,
     },
   });
+  if (count === 0) return; // by claude: the other event already confirmed it
 
   // by claude: emails (guest + hotel owner). They never throw, a mail problem can't fail the webhook.
   const full = await prisma.booking.findUnique({

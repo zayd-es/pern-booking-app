@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { MapPin, User } from "lucide-react"; // by claude
 import FacilityIcon from "../components/common/FacilityIcon"; // by claude
 import StarRating from "../components/common/StarRating";
@@ -232,6 +232,13 @@ const RoomDetails = () => {
                         No reviews yet
                       </span>
                     )}
+                    {/* by claude: reviews with comments live on the hotel page */}
+                    <Link
+                      to={`/hotels/${room.hotel.id}`}
+                      className="text-xs font-inter text-primary underline ml-1"
+                    >
+                      View hotel & reviews
+                    </Link>
                   </div>
                 </div>
               </div>
