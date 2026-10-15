@@ -1,10 +1,13 @@
 // by claude: rooms page redesigned. Compact filter bar on top, grid of cards (up to 4 per row)
 // and numbered pagination (12 rooms per page).
-import { useMemo, useState } from "react";
+// by claude: filtering, sorting and pagination now happen on the SERVER (GET /api/rooms), the page
+// only receives the 12 rooms it shows.
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
 import { useAppStore } from "../../store/useAppStore";
+import API from "../../lib/axios"; // by claude
 import RoomCard from "./_components/RoomCard";
 import FilterBar from "./_components/FilterBar";
 import RoomCardSkeleton from "./_components/RoomCardSkeleton";
@@ -22,12 +25,17 @@ const amenityOptions = [
   "Pool Access",
 ];
 const sortOptions = ["Price Low to High", "Price High to Low", "Newest First"];
+// by claude: label shown in the UI -> value understood by the API
+const SORT_PARAM = {
+  "Price Low to High": "price-asc",
+  "Price High to Low": "price-desc",
+  "Newest First": "newest",
+};
 
 const AllRooms = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const rooms = useAppStore((state) => state.rooms);
-  const roomsLoading = useAppStore((state) => state.roomsLoading);
+  const hotels = useAppStore((state) => state.hotels);
   const currency = useAppStore((state) => state.currency);
 
   const [filters, setFilters] = useState({
@@ -39,15 +47,18 @@ const AllRooms = () => {
   const [selectedSort, setSelectedSort] = useState("");
   const [page, setPage] = useState(1);
 
-  // price bounds come from the real prices of the rooms
-  const bounds = useMemo(() => {
-    if (!rooms.length) return { min: 0, max: 500 };
-    const prices = rooms.map((r) => r.pricePerNight);
-    return {
-      min: Math.floor(Math.min(...prices) / 10) * 10,
-      max: Math.ceil(Math.max(...prices) / 10) * 10,
-    };
-  }, [rooms]);
+  // by claude: data of the current page, as returned by the server
+  const [pageRooms, setPageRooms] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [serverBounds, setServerBounds] = useState({ min: 0, max: 500 });
+  const [roomsLoading, setRoomsLoading] = useState(true);
+
+  // price slider bounds = real prices of all available rooms (rounded to 10)
+  const bounds = {
+    min: Math.floor(serverBounds.min / 10) * 10,
+    max: Math.ceil(serverBounds.max / 10) * 10,
+  };
 
   // every change of a filter goes back to page 1
   const handleToggle = (key, value) => {
@@ -77,39 +88,44 @@ const AllRooms = () => {
   // ?hotel=<id> / ?destination=<city> (coming from a card or the search bar)
   const hotelId = searchParams.get("hotel");
   const destination = searchParams.get("destination");
-  const selectedHotel = rooms.find((r) => r.hotelId === hotelId)?.hotel;
+  const selectedHotel = hotels.find((h) => h.id === hotelId);
+  const currentPage = page;
 
-  const filteredRooms = useMemo(() => {
-    const matches = (room) =>
-      (filters.roomType.length === 0 ||
-        filters.roomType.includes(room.roomType)) &&
-      (filters.minPrice === null || room.pricePerNight >= filters.minPrice) &&
-      (filters.maxPrice === null || room.pricePerNight <= filters.maxPrice) &&
-      filters.amenities.every((a) =>
-        (room.amenities || []).some(
-          (item) => item.toLowerCase() === a.toLowerCase(),
-        ),
-      ) &&
-      (!hotelId || room.hotelId === hotelId) &&
-      (!destination ||
-        room.hotel.city.toLowerCase().includes(destination.toLowerCase()));
+  // by claude: ask the server for the current page whenever a filter / sort / page changes
+  // (small delay so dragging the price slider doesn't send a request per pixel)
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setRoomsLoading(true);
+      try {
+        const params = { page, limit: PAGE_SIZE };
+        if (filters.roomType.length) params.roomType = filters.roomType.join(",");
+        if (filters.amenities.length) params.amenities = filters.amenities.join(",");
+        if (filters.minPrice !== null) params.minPrice = filters.minPrice;
+        if (filters.maxPrice !== null) params.maxPrice = filters.maxPrice;
+        if (SORT_PARAM[selectedSort]) params.sort = SORT_PARAM[selectedSort];
+        if (hotelId) params.hotel = hotelId;
+        if (destination) params.destination = destination;
 
-    const sorters = {
-      "Price Low to High": (a, b) => a.pricePerNight - b.pricePerNight,
-      "Price High to Low": (a, b) => b.pricePerNight - a.pricePerNight,
-      "Newest First": (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+        const { data } = await API.get("/api/rooms", { params });
+        if (cancelled || !data.success) return;
+        setPageRooms(data.rooms);
+        setTotal(data.pagination.total);
+        setTotalPages(data.pagination.totalPages);
+        setServerBounds(data.bounds);
+        // a filter can leave fewer pages than the current one -> go back to the last page
+        if (page > data.pagination.totalPages) setPage(data.pagination.totalPages);
+      } catch {
+        if (!cancelled) setPageRooms([]);
+      } finally {
+        if (!cancelled) setRoomsLoading(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
     };
-
-    const list = rooms.filter(matches);
-    return sorters[selectedSort] ? list.sort(sorters[selectedSort]) : list;
-  }, [rooms, filters, selectedSort, hotelId, destination]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredRooms.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageRooms = filteredRooms.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+  }, [page, filters, selectedSort, hotelId, destination]);
 
   const activeCount =
     filters.roomType.length +
@@ -167,7 +183,7 @@ const AllRooms = () => {
         <span>
           {roomsLoading
             ? "Loading rooms..."
-            : `${filteredRooms.length} room${filteredRooms.length === 1 ? "" : "s"} found`}
+            : `${total} room${total === 1 ? "" : "s"} found`}
         </span>
         {hotelId && selectedHotel && (
           <button
@@ -202,7 +218,7 @@ const AllRooms = () => {
             ))}
       </div>
 
-      {!roomsLoading && filteredRooms.length === 0 && (
+      {!roomsLoading && total === 0 && (
         <p className="py-16 text-center text-gray-500">
           No rooms match your filters.
         </p>

@@ -14,7 +14,7 @@ const MyHotel = () => {
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const setIsOwner = useAppStore((state) => state.setIsOwner);
-  const fetchRooms = useAppStore((state) => state.fetchRooms);
+  const fetchHotels = useAppStore((state) => state.fetchHotels);
 
   const [original, setOriginal] = useState(null);
   const [form, setForm] = useState({
@@ -82,7 +82,7 @@ const MyHotel = () => {
       if (data.success) {
         toast.success(data.message);
         setOriginal({ ...form });
-        await fetchRooms();
+        await fetchHotels();
       } else {
         toast.error(data.message);
       }
@@ -110,7 +110,7 @@ const MyHotel = () => {
       if (data.success) {
         toast.success(data.message);
         setIsOwner(false);
-        await fetchRooms();
+        await fetchHotels();
         navigate("/");
       } else {
         toast.error(data.message);

@@ -29,7 +29,7 @@ const AddRoom = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const { getToken } = useAuth();
-  const fetchRooms = useAppStore((state) => state.fetchRooms);
+  const fetchHotels = useAppStore((state) => state.fetchHotels);
   const navigate = useNavigate();
 
   const [slots, setSlots] = useState(emptySlots);
@@ -136,7 +136,7 @@ const AddRoom = () => {
 
       if (data.success) {
         toast.success(data.message);
-        await fetchRooms();
+        await fetchHotels();
         navigate("/owner/list-room");
         if (!isEdit) {
           setInputs(emptyInputs());

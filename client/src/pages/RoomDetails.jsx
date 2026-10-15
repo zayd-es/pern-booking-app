@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { MapPin, User } from "lucide-react"; // by claude
 import FacilityIcon from "../components/common/FacilityIcon"; // by claude
 import StarRating from "../components/common/StarRating";
-import { useAppStore } from "../store/useAppStore";
 import { useAuth } from "@clerk/clerk-react";
 import toast from "react-hot-toast";
 import API from "../lib/axios";
 import FadeIn from "../components/common/FadeIn"; // by claude
+import Skeleton from "../components/common/Skeleton"; // by claude
 
 const RoomDetails = () => {
   const [checkInDate, setCheckInDate] = useState(null);
@@ -19,9 +19,37 @@ const RoomDetails = () => {
   const { id } = useParams();
   const { getToken } = useAuth();
   const navigate = useNavigate();
-  const rooms = useAppStore((state) => state.rooms);
+  // by claude: the room comes from GET /api/rooms/:id (the app no longer loads every room)
+  const [room, setRoom] = useState(null);
+  const [roomLoading, setRoomLoading] = useState(true);
 
-  const room = rooms.find((item) => item.id === id);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setRoomLoading(true);
+      try {
+        const { data } = await API.get(`/api/rooms/${id}`);
+        if (!cancelled) setRoom(data.room);
+      } catch {
+        if (!cancelled) setRoom(null);
+      } finally {
+        if (!cancelled) setRoomLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (roomLoading) {
+    return (
+      <div className="pt-36 px-4 md:px-16 lg:px-24 xl:px-32">
+        <Skeleton className="h-8 w-1/3" />
+        <Skeleton className="mt-6 h-72 w-full rounded-2xl" />
+      </div>
+    );
+  }
 
   if (!room) {
     return (

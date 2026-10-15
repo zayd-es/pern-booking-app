@@ -11,7 +11,7 @@ import {
 
 const FeaturedDestination = () => {
   const navigate = useNavigate();
-  const roomsLoading = useAppStore((state) => state.roomsLoading);
+  const hotelsLoading = useAppStore((state) => state.hotelsLoading);
 
   // by claude: the 4 newest hotels on the site (skipping the ones already in "Recommended")
   const newest = useNewestHotels();
@@ -19,7 +19,7 @@ const FeaturedDestination = () => {
   const recommendedIds = new Set(recommended.map((h) => h.id));
   const featuredHotels = newest.filter((h) => !recommendedIds.has(h.id));
 
-  if (!roomsLoading && featuredHotels.length === 0) return null;
+  if (!hotelsLoading && featuredHotels.length === 0) return null;
 
   return (
     <section className="px-6 md:px-16 lg:px-24 xl:px-32 py-16 md:py-20">
@@ -41,7 +41,7 @@ const FeaturedDestination = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10 mt-10">
-        {roomsLoading
+        {hotelsLoading
           ? Array.from({ length: 4 }, (_, i) => <HotelCardSkeleton key={i} />)
           : featuredHotels
               .slice(0, 4)

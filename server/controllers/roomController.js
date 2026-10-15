@@ -272,43 +272,119 @@ export const deleteRoom = async (req, res) => {
   }
 };
 
+// by claude: public room fields (safe hotel fields only: no contact / ownerId)
+const publicRoomInclude = {
+  hotel: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      address: true,
+      city: true,
+      country: true,
+      createdAt: true,
+      owner: { select: { image: true } },
+    },
+  },
+};
+
+// by claude: attach the real average rating + number of reviews of each hotel
+const withRatings = async (rooms) => {
+  const ratings = await getHotelRatings([...new Set(rooms.map((r) => r.hotelId))]);
+  return rooms.map((room) => ({
+    ...room,
+    hotel: {
+      ...room.hotel,
+      rating: ratings[room.hotelId] || { average: 0, count: 0 },
+    },
+  }));
+};
+
+// by claude: "a,b,c" -> ["a","b","c"]
+const csv = (value) =>
+  typeof value === "string"
+    ? value.split(",").map((v) => v.trim()).filter(Boolean)
+    : [];
+
+const ROOM_SORTS = {
+  "price-asc": [{ pricePerNight: "asc" }, { id: "asc" }],
+  "price-desc": [{ pricePerNight: "desc" }, { id: "asc" }],
+  newest: [{ createdAt: "desc" }, { id: "asc" }],
+};
+
+// by claude: public rooms, filtered + sorted + paginated by the database.
+// Query: page, limit (max 48), hotel, destination, roomType (a,b), amenities (a,b), minPrice, maxPrice, sort
 export const getRooms = async (req, res) => {
   try {
-    const rooms = await prisma.room.findMany({
-      where: {
-        isAvailable: true,
-      },
-      include: {
-        // by claude: public endpoint, only expose safe hotel fields (no contact / ownerId)
-        hotel: {
-          select: {
-            id: true,
-            name: true,
-            description: true, // by claude
-            address: true,
-            city: true,
-            country: true,
-            createdAt: true,
-            owner: { select: { image: true } },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
+    const q = req.query;
+    const page = Math.max(1, parseInt(q.page, 10) || 1);
+    const limit = Math.min(48, Math.max(1, parseInt(q.limit, 10) || 12));
+    const minPrice = Number.isFinite(Number(q.minPrice)) && q.minPrice !== undefined && q.minPrice !== "" ? Number(q.minPrice) : null;
+    const maxPrice = Number.isFinite(Number(q.maxPrice)) && q.maxPrice !== undefined && q.maxPrice !== "" ? Number(q.maxPrice) : null;
+    const roomTypes = csv(q.roomType);
+    const amenities = csv(q.amenities);
+
+    const where = {
+      isAvailable: true,
+      ...(typeof q.hotel === "string" && q.hotel ? { hotelId: q.hotel } : {}),
+      ...(roomTypes.length ? { roomType: { in: roomTypes } } : {}),
+      ...(amenities.length ? { amenities: { hasEvery: amenities } } : {}),
+      ...(minPrice !== null || maxPrice !== null
+        ? {
+            pricePerNight: {
+              ...(minPrice !== null ? { gte: minPrice } : {}),
+              ...(maxPrice !== null ? { lte: maxPrice } : {}),
+            },
+          }
+        : {}),
+      ...(typeof q.destination === "string" && q.destination.trim()
+        ? { hotel: { city: { contains: q.destination.trim(), mode: "insensitive" } } }
+        : {}),
+    };
+
+    const [total, rooms, priceRange] = await Promise.all([
+      prisma.room.count({ where }),
+      prisma.room.findMany({
+        where,
+        include: publicRoomInclude,
+        orderBy: ROOM_SORTS[q.sort] || ROOM_SORTS.newest,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      // bounds of the price slider: all available rooms, whatever the filters are
+      prisma.room.aggregate({
+        where: { isAvailable: true },
+        _min: { pricePerNight: true },
+        _max: { pricePerNight: true },
+      }),
+    ]);
+
+    return res.json({
+      success: true,
+      rooms: await withRatings(rooms),
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      bounds: {
+        min: priceRange._min.pricePerNight ?? 0,
+        max: priceRange._max.pricePerNight ?? 500,
       },
     });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 
-    // by claude: real average rating + number of reviews of each hotel
-    const ratings = await getHotelRatings([...new Set(rooms.map((r) => r.hotelId))]);
-    const roomsWithRating = rooms.map((room) => ({
-      ...room,
-      hotel: {
-        ...room.hotel,
-        rating: ratings[room.hotelId] || { average: 0, count: 0 },
-      },
-    }));
-
-    return res.json({ success: true, rooms: roomsWithRating });
+// by claude: one public room (room page)
+export const getRoomById = async (req, res) => {
+  try {
+    const room = await prisma.room.findUnique({
+      where: { id: req.params.id },
+      include: publicRoomInclude,
+    });
+    if (!room) {
+      return res.status(404).json({ success: false, message: "Room not found" });
+    }
+    const [withRating] = await withRatings([room]);
+    return res.json({ success: true, room: withRating });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

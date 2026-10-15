@@ -224,3 +224,62 @@ export const getHotelById = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// by claude: public list of hotels that have at least one available room (Home, "Newly added",
+// "Recommended"). Light payload: one cover photo + cheapest price per hotel, newest first, max 100.
+export const getHotels = async (req, res) => {
+  try {
+    const hotels = await prisma.hotel.findMany({
+      where: { rooms: { some: { isAvailable: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        city: true,
+        country: true,
+        createdAt: true,
+        _count: { select: { rooms: { where: { isAvailable: true } } } },
+        rooms: {
+          where: { isAvailable: true },
+          orderBy: { pricePerNight: "asc" },
+          take: 1, // the cheapest room gives the cover photo and the "from" price
+          select: { pricePerNight: true, images: true },
+        },
+      },
+    });
+
+    const ratings = await getHotelRatings(hotels.map((h) => h.id));
+    return res.json({
+      success: true,
+      hotels: hotels.map(({ rooms, _count, ...h }) => ({
+        ...h,
+        image: rooms[0]?.images?.[0] || null,
+        minPrice: rooms[0]?.pricePerNight ?? 0,
+        roomsCount: _count.rooms,
+        rating: ratings[h.id] || { average: 0, count: 0 },
+      })),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// by claude: real numbers for the About page (hotels / rooms / cities with something to book)
+export const getPublicStats = async (req, res) => {
+  try {
+    const [hotels, rooms, cities] = await Promise.all([
+      prisma.hotel.count({ where: { rooms: { some: { isAvailable: true } } } }),
+      prisma.room.count({ where: { isAvailable: true } }),
+      prisma.hotel.findMany({
+        where: { rooms: { some: { isAvailable: true } } },
+        distinct: ["city"],
+        select: { city: true },
+      }),
+    ]);
+    return res.json({ success: true, stats: { hotels, rooms, cities: cities.length } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

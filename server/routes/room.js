@@ -5,6 +5,7 @@ import {
   createRoom,
   deleteRoom,
   getOwnerRooms,
+  getRoomById, // by claude
   getRooms,
   toggleRoomAvailability,
   updateRoom, // by claude
@@ -15,6 +16,8 @@ const roomRouter = express.Router();
 roomRouter.post("/", protect, upload.array("images", 4), createRoom);
 roomRouter.get("/", getRooms);
 roomRouter.get("/owner", protect, getOwnerRooms);
+// by claude: public room by id (after "/owner" so it does not catch it)
+roomRouter.get("/:id", getRoomById);
 roomRouter.delete("/:id", protect, deleteRoom);
 // by claude: edit a room
 roomRouter.patch("/:id", protect, upload.array("images", 4), updateRoom);

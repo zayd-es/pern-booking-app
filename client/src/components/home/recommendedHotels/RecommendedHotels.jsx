@@ -7,12 +7,12 @@ import HotelCardSkeleton from "../../common/HotelCardSkeleton"; // by claude
 
 const RecommendedHotels = () => {
   const searchedCities = useAppStore((state) => state.searchedCities);
-  const roomsLoading = useAppStore((state) => state.roomsLoading); // by claude
+  const hotelsLoading = useAppStore((state) => state.hotelsLoading); // by claude
 
   const recommendedHotels = useRecommendedHotels(); // by claude
 
   // by claude: while loading, show skeletons only if the user has searched cities
-  const showSkeleton = roomsLoading && searchedCities?.length > 0;
+  const showSkeleton = hotelsLoading && searchedCities?.length > 0;
   if (!showSkeleton && recommendedHotels.length === 0) return null;
 
   return (

@@ -1,9 +1,10 @@
-// by claude: About page (story, real numbers from the store, how it works, call to action)
+// by claude: About page (story, real numbers from the server, how it works, call to action)
+import { useEffect, useState } from "react"; // by claude
 import { Link } from "react-router-dom";
 import { Search, CalendarCheck, CreditCard, ShieldCheck, Heart, MapPin } from "lucide-react";
 import FadeIn from "../components/common/FadeIn";
 import { useAppStore } from "../store/useAppStore";
-import { useHotels } from "../lib/useHotels";
+import API from "../lib/axios"; // by claude
 
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1597212618440-806262de4f6b?auto=format&fit=crop&w=1600&q=80";
@@ -21,16 +22,20 @@ const VALUES = [
 ];
 
 const About = () => {
-  const hotels = useHotels();
-  const rooms = useAppStore((state) => state.rooms);
   const setShowHotelReg = useAppStore((state) => state.setShowHotelReg);
-  const citiesCount = new Set(hotels.map((h) => h.city)).size;
 
-  // real numbers from the data (no invented statistics)
+  // real numbers from the database (no invented statistics): GET /api/hotels/stats
+  const [counts, setCounts] = useState({ hotels: 0, rooms: 0, cities: 0 });
+  useEffect(() => {
+    API.get("/api/hotels/stats")
+      .then(({ data }) => data.success && setCounts(data.stats))
+      .catch(() => {});
+  }, []);
+
   const stats = [
-    { value: hotels.length, label: "Hotels" },
-    { value: rooms.length, label: "Rooms" },
-    { value: citiesCount, label: "Cities" },
+    { value: counts.hotels, label: "Hotels" },
+    { value: counts.rooms, label: "Rooms" },
+    { value: counts.cities, label: "Cities" },
   ];
 
   return (

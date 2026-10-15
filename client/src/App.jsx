@@ -32,15 +32,15 @@ const ScrollToTop = () => {
 
 const App = () => {
   const showHotelReg = useAppStore((state) => state.showHotelReg);
-  const fetchRooms = useAppStore((state) => state.fetchRooms);
+  const fetchHotels = useAppStore((state) => state.fetchHotels);
   const { user, isLoaded } = useUser();
   const { getToken } = useAuth();
 
   const fetchUser = useAppStore((state) => state.fetchUser);
   const resetUser = useAppStore((state) => state.resetUser); // by claude
   useEffect(() => {
-    fetchRooms();
-  }, [fetchRooms]);
+    fetchHotels();
+  }, [fetchHotels]);
   useEffect(() => {
     if (isLoaded && user) {
       fetchUser(getToken);

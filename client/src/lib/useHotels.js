@@ -1,40 +1,12 @@
-// by claude: the API returns rooms (each with its hotel). These hooks group them into HOTELS.
+// by claude: hooks on top of the hotels list (store). Home sections are built from it.
 import { useMemo } from "react";
 import { useAppStore } from "../store/useAppStore";
 
 const RECOMMENDED_TOTAL = 4;
 const RECOMMENDED_CITIES = 4; // searchedCities = last 4 searched cities, newest first
 
-// one entry per hotel: cover photo + cheapest price + number of available rooms
-export const useHotels = () => {
-  const rooms = useAppStore((state) => state.rooms);
-
-  return useMemo(() => {
-    const byHotel = new Map();
-    for (const room of rooms || []) {
-      if (!room.hotel) continue;
-      const entry = byHotel.get(room.hotelId) || {
-        id: room.hotelId,
-        name: room.hotel.name,
-        city: room.hotel.city,
-        country: room.hotel.country,
-        description: room.hotel.description, // by claude
-        rating: room.hotel.rating, // by claude: { average, count }
-        createdAt: room.hotel.createdAt,
-        image: null,
-        minPrice: Infinity,
-        roomsCount: 0,
-      };
-      entry.roomsCount += 1;
-      if (room.pricePerNight < entry.minPrice) {
-        entry.minPrice = room.pricePerNight;
-        entry.image = room.images?.[0] || entry.image; // cover = cheapest room photo
-      }
-      byHotel.set(room.hotelId, entry);
-    }
-    return [...byHotel.values()];
-  }, [rooms]);
-};
+// by claude: hotels come already grouped from the server (GET /api/hotels, newest first)
+export const useHotels = () => useAppStore((state) => state.hotels);
 
 // newest hotels first
 export const useNewestHotels = () => {
