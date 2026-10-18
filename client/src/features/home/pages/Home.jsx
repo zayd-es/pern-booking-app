@@ -1,13 +1,13 @@
-import FeaturedDestanition from "../components/home/card/FeaturedDestanition";
-import Hero from "../components/home/hero/Hero";
-import NewsLetter from "../components/home/newsLetter/NewsLetter";
-import RecommendedHotels from "../components/home/recommendedHotels/RecommendedHotels";
+import FeaturedDestination from "@/features/home/components/FeaturedDestination";
+import Hero from "@/features/home/components/Hero";
+import NewsLetter from "@/features/home/components/NewsLetter";
+import RecommendedHotels from "@/features/home/components/RecommendedHotels";
 const Home = () => {
   return (
     <>
       <Hero />
       <RecommendedHotels />
-      <FeaturedDestanition />
+      <FeaturedDestination />
       <NewsLetter />
     </>
   );

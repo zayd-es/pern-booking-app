@@ -1,6 +1,6 @@
 // by claude: sun / moon button for dark mode
 import { Moon, Sun } from "lucide-react";
-import { toggleDarkMode, useDarkMode } from "../../lib/theme";
+import { toggleDarkMode, useDarkMode } from "@/shared/lib/theme";
 
 const ThemeToggle = ({ className = "" }) => {
   const isDark = useDarkMode();

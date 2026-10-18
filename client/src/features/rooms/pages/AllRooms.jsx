@@ -6,13 +6,13 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
-import { useAppStore } from "../../store/useAppStore";
-import API from "../../lib/axios"; // by claude
-import RoomCard from "./_components/RoomCard";
-import FilterBar from "./_components/FilterBar";
-import RoomCardSkeleton from "./_components/RoomCardSkeleton";
-import FadeIn from "../../components/common/FadeIn";
-import Pagination from "../../components/common/Pagination";
+import { useAppStore } from "@/store/useAppStore";
+import { getRooms } from "@/features/rooms/api";
+import RoomCard from "@/features/rooms/components/RoomCard";
+import FilterBar from "@/features/rooms/components/FilterBar";
+import RoomCardSkeleton from "@/features/rooms/components/RoomCardSkeleton";
+import FadeIn from "@/shared/components/ui/FadeIn";
+import Pagination from "@/shared/components/ui/Pagination";
 
 const PAGE_SIZE = 12;
 
@@ -107,7 +107,7 @@ const AllRooms = () => {
         if (hotelId) params.hotel = hotelId;
         if (destination) params.destination = destination;
 
-        const { data } = await API.get("/api/rooms", { params });
+        const { data } = await getRooms({ params });
         if (cancelled || !data.success) return;
         setPageRooms(data.rooms);
         setTotal(data.pagination.total);

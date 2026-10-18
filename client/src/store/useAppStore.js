@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
-import API from "../lib/axios";
+import { getHotels } from "@/features/hotels/api";
+import { getUser } from "@/features/users/api";
 
 export const useAppStore = create((set, get) => ({
   currency: import.meta.env.VITE_CURRENCY || "$",
@@ -18,7 +19,7 @@ export const useAppStore = create((set, get) => ({
   fetchUser: async (getToken) => {
     try {
       const token = await getToken();
-      const { data } = await API.get("/api/users", {
+      const { data } = await getUser({
         headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) {
@@ -41,7 +42,7 @@ export const useAppStore = create((set, get) => ({
       ? new Promise((resolve) => setTimeout(resolve, 1000))
       : null;
     try {
-      const { data } = await API.get("/api/hotels");
+      const { data } = await getHotels();
       if (data.success) {
         set({ hotels: data.hotels });
       } else {

@@ -1,10 +1,10 @@
 // by claude: registration popup redesigned (loading state, esc to close, scroll, clean fields)
 import { useEffect, useState } from "react";
-import { cities } from "../../lib/cities";
+import { cities } from "@/shared/lib/cities";
 import { X } from "lucide-react"; // by claude
-import { useAppStore } from "../../store/useAppStore";
+import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@clerk/clerk-react";
-import API from "../../lib/axios";
+import { createHotel } from "@/features/hotels/api";
 import toast from "react-hot-toast";
 
 const inputClass =
@@ -51,7 +51,7 @@ const HotelReg = () => {
     setLoading(true);
     try {
       const token = await getToken();
-      const { data } = await API.post("/api/hotels", form, {
+      const { data } = await createHotel(form, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) {

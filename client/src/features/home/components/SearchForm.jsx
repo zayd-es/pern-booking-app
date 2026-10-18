@@ -1,11 +1,11 @@
 // by claude: search bar redesigned (pill style); also skips the "recent search" call when logged out
 import { useState } from "react";
-import { cities } from "../../../../lib/cities";
+import { cities } from "@/shared/lib/cities";
 import { MapPin, Calendar, Users, Search } from "lucide-react"; // by claude
-import { useAppStore } from "../../../../store/useAppStore";
+import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
-import API from "../../../../lib/axios";
+import { storeRecentSearch } from "@/features/users/api";
 
 const fieldClass = "flex-1 min-w-0 px-5 py-3 cursor-text";
 const labelClass =
@@ -28,9 +28,7 @@ export const SearchForm = () => {
     if (!isSignedIn) return;
 
     try {
-      await API.post(
-        "/api/users/store-recent-search",
-        { recentSearchedCity: destination },
+      await storeRecentSearch({ recentSearchedCity: destination },
         { headers: { Authorization: `Bearer ${await getToken()}` } },
       );
       // by claude: the store setter takes an array, not an updater function

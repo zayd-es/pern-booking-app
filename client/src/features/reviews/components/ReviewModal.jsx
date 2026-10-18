@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Star, X } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import toast from "react-hot-toast";
-import API from "../../lib/axios";
+import { createReview, updateReview } from "@/features/reviews/api";
 
 const LABELS = ["", "Poor", "Fair", "Good", "Very good", "Excellent"];
 
@@ -29,8 +29,8 @@ const ReviewModal = ({ booking, review, hotelName, onClose, onDone }) => {
     try {
       const headers = { Authorization: `Bearer ${await getToken()}` };
       const { data } = review
-        ? await API.patch(`/api/reviews/${review.id}`, { rating, comment }, { headers })
-        : await API.post("/api/reviews", { bookingId: booking.id, rating, comment }, { headers });
+        ? await updateReview(review.id, { rating, comment }, { headers })
+        : await createReview({ bookingId: booking.id, rating, comment }, { headers });
       if (data.success) {
         toast.success(data.message);
         onDone(review ? review.id : booking.id, data.review);

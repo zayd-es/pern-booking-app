@@ -1,5 +1,5 @@
 // by claude: hero redesigned (light, minimal, photo collage instead of the old dark background)
-import { SearchForm } from "./_components/SearchForm";
+import { SearchForm } from "@/features/home/components/SearchForm";
 // by claude: photos from Unsplash instead of local files
 const roomImg1 = "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1200&q=80";
 const roomImg2 = "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80";

@@ -1,5 +1,5 @@
 // by claude: loading placeholder with the same layout as HotelCard
-import Skeleton from "./Skeleton";
+import Skeleton from "@/shared/components/ui/Skeleton";
 
 const HotelCardSkeleton = () => (
   <div className="w-full" role="status" aria-label="Loading">

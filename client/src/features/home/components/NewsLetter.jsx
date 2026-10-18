@@ -1,7 +1,7 @@
 // by claude: was a fake newsletter form (saved nothing). Now a call to action for hotel owners.
 import { useNavigate } from "react-router-dom";
-import Title from "../../common/Title";
-import { useAppStore } from "../../../store/useAppStore";
+import Title from "@/shared/components/ui/Title";
+import { useAppStore } from "@/store/useAppStore";
 
 const NewsLetter = () => {
   const navigate = useNavigate();

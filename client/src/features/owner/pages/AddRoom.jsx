@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { ImagePlus, X } from "lucide-react"; // by claude
-import Title from "../../components/common/Title";
+import Title from "@/shared/components/ui/Title";
 import { useAuth } from "@clerk/clerk-react";
 import toast from "react-hot-toast";
-import API from "../../lib/axios";
-import { useAppStore } from "../../store/useAppStore";
+import { getOwnerRooms, createRoom, updateRoom } from "@/features/rooms/api";
+import { useAppStore } from "@/store/useAppStore";
 import { useNavigate, useParams } from "react-router-dom";
 import imageCompression from "browser-image-compression"; // by claude
 
@@ -42,7 +42,7 @@ const AddRoom = () => {
     if (!isEdit) return;
     const loadRoom = async () => {
       try {
-        const { data } = await API.get("/api/rooms/owner", {
+        const { data } = await getOwnerRooms({
           headers: { Authorization: `Bearer ${await getToken()}` },
         });
         const room = data.rooms?.find((r) => r.id === id);
@@ -131,8 +131,8 @@ const AddRoom = () => {
 
       const headers = { Authorization: `Bearer ${await getToken()}` };
       const { data } = isEdit
-        ? await API.patch(`/api/rooms/${id}`, formData, { headers })
-        : await API.post("/api/rooms", formData, { headers });
+        ? await updateRoom(id, formData, { headers })
+        : await createRoom(formData, { headers });
 
       if (data.success) {
         toast.success(data.message);

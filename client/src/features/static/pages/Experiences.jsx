@@ -1,8 +1,8 @@
 // by claude: Experiences page (curated things to do in Morocco, each one links to hotels in that city)
 import { Link } from "react-router-dom";
 import { ArrowRight, MapPin } from "lucide-react";
-import Title from "../components/common/Title";
-import FadeIn from "../components/common/FadeIn";
+import Title from "@/shared/components/ui/Title";
+import FadeIn from "@/shared/components/ui/FadeIn";
 
 const photo = (id) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=900&q=80`;

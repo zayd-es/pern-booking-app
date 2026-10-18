@@ -1,11 +1,11 @@
 // by claude: navbar redesigned (always light and minimal, active links, visible "My Bookings", cleaner mobile menu)
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import Logo from "./Logo"; // by claude
-import ThemeToggle from "./ThemeToggle"; // by claude
+import Logo from "@/shared/components/ui/Logo"; // by claude
+import ThemeToggle from "@/shared/components/layout/ThemeToggle"; // by claude
 import { Menu, X } from "lucide-react"; // by claude
 import { useClerk, useUser, UserButton } from "@clerk/clerk-react";
-import { useAppStore } from "../../store/useAppStore";
+import { useAppStore } from "@/store/useAppStore";
 
 export const Navbar = () => {
   const { openSignIn } = useClerk();

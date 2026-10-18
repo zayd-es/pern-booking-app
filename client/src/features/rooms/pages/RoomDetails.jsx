@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { MapPin, User } from "lucide-react"; // by claude
-import FacilityIcon from "../components/common/FacilityIcon"; // by claude
-import StarRating from "../components/common/StarRating";
+import FacilityIcon from "@/features/rooms/components/FacilityIcon"; // by claude
+import StarRating from "@/features/reviews/components/StarRating";
 import { useAuth } from "@clerk/clerk-react";
 import toast from "react-hot-toast";
-import API from "../lib/axios";
-import FadeIn from "../components/common/FadeIn"; // by claude
-import Skeleton from "../components/common/Skeleton"; // by claude
+import { getRoomById } from "@/features/rooms/api";
+import { checkRoomAvailability, createBooking } from "@/features/bookings/api";
+import FadeIn from "@/shared/components/ui/FadeIn"; // by claude
+import Skeleton from "@/shared/components/ui/Skeleton"; // by claude
 
 const RoomDetails = () => {
   const [checkInDate, setCheckInDate] = useState(null);
@@ -28,7 +29,7 @@ const RoomDetails = () => {
     const load = async () => {
       setRoomLoading(true);
       try {
-        const { data } = await API.get(`/api/rooms/${id}`);
+        const { data } = await getRoomById(id);
         if (!cancelled) setRoom(data.room);
       } catch {
         if (!cancelled) setRoom(null);
@@ -65,9 +66,7 @@ const RoomDetails = () => {
         return toast.error("Check-In Date should be less than Check-Out Date");
       }
 
-      const { data } = await API.post(
-        "/api/bookings/check-availability",
-        {
+      const { data } = await checkRoomAvailability({
           roomId: id,
           checkInDate,
           checkOutDate,
@@ -95,9 +94,7 @@ const RoomDetails = () => {
       if (!isAvailable) {
         return checkAvailability();
       } else {
-        const { data } = await API.post(
-          "/api/bookings/book",
-          {
+        const { data } = await createBooking({
             roomId: id,
             checkInDate,
             checkOutDate,

@@ -1,6 +1,6 @@
 // by claude: hooks on top of the hotels list (store). Home sections are built from it.
 import { useMemo } from "react";
-import { useAppStore } from "../store/useAppStore";
+import { useAppStore } from "@/store/useAppStore";
 
 const RECOMMENDED_TOTAL = 4;
 const RECOMMENDED_CITIES = 4; // searchedCities = last 4 searched cities, newest first

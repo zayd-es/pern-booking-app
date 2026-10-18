@@ -2,7 +2,7 @@
 // so the room cards can use the full width of the page
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
-import FacilityIcon from "../../../components/common/FacilityIcon";
+import FacilityIcon from "@/features/rooms/components/FacilityIcon";
 
 const chipClass = (active) =>
   `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] transition-colors cursor-pointer select-none ${

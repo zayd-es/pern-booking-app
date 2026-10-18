@@ -1,7 +1,7 @@
 // by claude: compact vertical card (photo on top) so 3-4 rooms fit on one row
 import { MapPin } from "lucide-react";
-import RatingBadge from "../../../components/common/RatingBadge"; // by claude
-import FacilityIcon from "../../../components/common/FacilityIcon";
+import RatingBadge from "@/features/reviews/components/RatingBadge"; // by claude
+import FacilityIcon from "@/features/rooms/components/FacilityIcon";
 
 const RoomCard = ({ room, currency, navigate }) => {
   const handleRoomClick = () => {

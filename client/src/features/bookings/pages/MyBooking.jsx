@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import Title from "../components/common/Title";
+import Title from "@/shared/components/ui/Title";
 import { MapPin, Users, Star } from "lucide-react"; // by claude
 import { useAuth } from "@clerk/clerk-react";
-import API from "../lib/axios";
+import { getUserBookings, createStripePayment, cancelBooking } from "@/features/bookings/api";
 import toast from "react-hot-toast";
-import FadeIn from "../components/common/FadeIn"; // by claude
-import Pagination from "../components/common/Pagination"; // by claude
-import Skeleton from "../components/common/Skeleton"; // by claude
-import ReviewModal from "../components/common/ReviewModal"; // by claude
+import FadeIn from "@/shared/components/ui/FadeIn"; // by claude
+import Pagination from "@/shared/components/ui/Pagination"; // by claude
+import Skeleton from "@/shared/components/ui/Skeleton"; // by claude
+import ReviewModal from "@/features/reviews/components/ReviewModal"; // by claude
 
 const MyBooking = () => {
   const { userId, getToken } = useAuth();
@@ -39,7 +39,7 @@ const MyBooking = () => {
 
   const goToPage = async (pageToLoad) => {
     try {
-      const { data } = await API.get("/api/bookings/user", {
+      const { data } = await getUserBookings({
         params: { page: pageToLoad, limit: 10 },
         headers: { Authorization: `Bearer ${await getToken()}` },
       });
@@ -55,7 +55,7 @@ const MyBooking = () => {
   useEffect(() => {
     const fetchFirstPage = async () => {
       try {
-        const { data } = await API.get("/api/bookings/user", {
+        const { data } = await getUserBookings({
           params: { page: 1, limit: 10 },
           headers: { Authorization: `Bearer ${await getToken()}` },
         });
@@ -76,9 +76,7 @@ const MyBooking = () => {
 
   const handlePayment = async (bookingId) => {
     try {
-      const { data } = await API.post(
-        "/api/bookings/stripe-payment",
-        { bookingId },
+      const { data } = await createStripePayment({ bookingId },
         { headers: { Authorization: `Bearer ${await getToken()}` } },
       );
       if (data.success) {
@@ -99,9 +97,7 @@ const MyBooking = () => {
   const handleCancel = async (bookingId, isPaid = false) => {
     if (!window.confirm(isPaid ? "Cancel this booking? Your payment will be refunded." : "Cancel this booking?")) return;
     try {
-      const { data } = await API.patch(
-        `/api/bookings/${bookingId}/cancel`,
-        {},
+      const { data } = await cancelBooking(bookingId, {},
         { headers: { Authorization: `Bearer ${await getToken()}` } },
       );
       if (data.success) {

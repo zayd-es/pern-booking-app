@@ -1,13 +1,13 @@
 // by claude: section redesigned (left title + "View all" link, 4 column grid)
 import { useNavigate } from "react-router-dom";
-import Title from "../../common/Title";
-import HotelCard from "../../common/HotelCard";
-import HotelCardSkeleton from "../../common/HotelCardSkeleton";
-import { useAppStore } from "../../../store/useAppStore";
+import Title from "@/shared/components/ui/Title";
+import HotelCard from "@/features/hotels/components/HotelCard";
+import HotelCardSkeleton from "@/features/hotels/components/HotelCardSkeleton";
+import { useAppStore } from "@/store/useAppStore";
 import {
   useNewestHotels,
   useRecommendedHotels,
-} from "../../../lib/useHotels"; // by claude
+} from "@/features/hotels/hooks/useHotels"; // by claude
 
 const FeaturedDestination = () => {
   const navigate = useNavigate();

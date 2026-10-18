@@ -1,9 +1,9 @@
 // by claude: card now shows a HOTEL (not a room): cover photo, name, city, "from $X / night", rooms count
 import { Link } from "react-router-dom";
 import { MapPin } from "lucide-react";
-import RatingBadge from "./RatingBadge"; // by claude
-import { useAppStore } from "../../store/useAppStore";
-import FadeIn from "./FadeIn";
+import RatingBadge from "@/features/reviews/components/RatingBadge"; // by claude
+import { useAppStore } from "@/store/useAppStore";
+import FadeIn from "@/shared/components/ui/FadeIn";
 
 const HotelCard = ({ hotel, index = 0 }) => {
   const currency = useAppStore((state) => state.currency);

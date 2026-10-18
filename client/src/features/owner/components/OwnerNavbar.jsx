@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { UserButton } from "@clerk/clerk-react";
-import Logo from "../../../components/common/Logo"; // by claude
+import Logo from "@/shared/components/ui/Logo"; // by claude
 
 const Navbar = () => {
   return (

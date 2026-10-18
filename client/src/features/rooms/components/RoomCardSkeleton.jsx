@@ -1,5 +1,5 @@
 // by claude: loading placeholder with the same layout as the (vertical) RoomCard
-import Skeleton from "../../../components/common/Skeleton";
+import Skeleton from "@/shared/components/ui/Skeleton";
 
 const RoomCardSkeleton = () => (
   <div role="status" aria-label="Loading">

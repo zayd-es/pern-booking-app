@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import toast from "react-hot-toast";
-import Title from "../../components/common/Title";
-import API from "../../lib/axios";
-import { cities } from "../../lib/cities";
-import { useAppStore } from "../../store/useAppStore";
+import Title from "@/shared/components/ui/Title";
+import { getMyHotel, updateMyHotel, deleteMyHotel } from "@/features/hotels/api";
+import { cities } from "@/shared/lib/cities";
+import { useAppStore } from "@/store/useAppStore";
 
 const FIELDS = ["name", "contact", "address", "description", "city", "country"]; // by claude: + description
 
@@ -33,7 +33,7 @@ const MyHotel = () => {
     const fetchHotel = async () => {
       try {
         const token = await getToken();
-        const { data } = await API.get("/api/hotels/mine", {
+        const { data } = await getMyHotel({
           headers: { Authorization: `Bearer ${token}` },
         });
         if (data.success) {
@@ -76,7 +76,7 @@ const MyHotel = () => {
     setSaving(true);
     try {
       const token = await getToken();
-      const { data } = await API.patch("/api/hotels/mine", changedFields, {
+      const { data } = await updateMyHotel(changedFields, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) {
@@ -104,7 +104,7 @@ const MyHotel = () => {
     setDeleting(true);
     try {
       const token = await getToken();
-      const { data } = await API.delete("/api/hotels/mine", {
+      const { data } = await deleteMyHotel({
         headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) {

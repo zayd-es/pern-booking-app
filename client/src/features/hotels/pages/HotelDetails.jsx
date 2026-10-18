@@ -2,17 +2,18 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { MapPin, ArrowRight } from "lucide-react";
-import API from "../lib/axios";
+import { getHotelById } from "@/features/hotels/api";
+import { replyToReview, getHotelReviews } from "@/features/reviews/api";
 import { useAuth } from "@clerk/clerk-react"; // by claude
 import toast from "react-hot-toast"; // by claude
-import ReviewModal from "../components/common/ReviewModal"; // by claude
-import { useAppStore } from "../store/useAppStore";
-import FadeIn from "../components/common/FadeIn";
-import Skeleton from "../components/common/Skeleton";
-import FacilityIcon from "../components/common/FacilityIcon";
-import RatingBadge from "../components/common/RatingBadge"; // by claude
-import StarRating from "../components/common/StarRating"; // by claude
-import Pagination from "../components/common/Pagination"; // by claude
+import ReviewModal from "@/features/reviews/components/ReviewModal"; // by claude
+import { useAppStore } from "@/store/useAppStore";
+import FadeIn from "@/shared/components/ui/FadeIn";
+import Skeleton from "@/shared/components/ui/Skeleton";
+import FacilityIcon from "@/features/rooms/components/FacilityIcon";
+import RatingBadge from "@/features/reviews/components/RatingBadge"; // by claude
+import StarRating from "@/features/reviews/components/StarRating"; // by claude
+import Pagination from "@/shared/components/ui/Pagination"; // by claude
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -34,9 +35,7 @@ const HotelDetails = () => {
   // by claude: owner publishes (or removes, with empty text) the answer to a review
   const saveReply = async (reviewId) => {
     try {
-      const { data } = await API.patch(
-        `/api/reviews/${reviewId}/reply`,
-        { reply: replyText },
+      const { data } = await replyToReview(reviewId, { reply: replyText },
         { headers: { Authorization: `Bearer ${await getToken()}` } },
       );
       if (data.success) {
@@ -56,7 +55,7 @@ const HotelDetails = () => {
     const loadReviews = async () => {
       try {
         const token = isSignedIn ? await getToken() : null; // by claude: optional, for isMine / canReply
-        const { data } = await API.get(`/api/reviews/hotel/${id}`, {
+        const { data } = await getHotelReviews(id, {
           params: { page: reviewPage, limit: 5 },
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
@@ -80,7 +79,7 @@ const HotelDetails = () => {
     const load = async () => {
       setStatus("loading");
       try {
-        const { data } = await API.get(`/api/hotels/${id}`);
+        const { data } = await getHotelById(id);
         if (cancelled) return;
         setHotel(data.hotel);
         setMainImage(null);

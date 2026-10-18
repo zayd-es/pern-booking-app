@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react"; // by claude
 import { Link } from "react-router-dom";
 import { Search, CalendarCheck, CreditCard, ShieldCheck, Heart, MapPin } from "lucide-react";
-import FadeIn from "../components/common/FadeIn";
-import { useAppStore } from "../store/useAppStore";
-import API from "../lib/axios"; // by claude
+import FadeIn from "@/shared/components/ui/FadeIn";
+import { useAppStore } from "@/store/useAppStore";
+import { getHotelStats } from "@/features/hotels/api";
 
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1597212618440-806262de4f6b?auto=format&fit=crop&w=1600&q=80";
@@ -27,7 +27,7 @@ const About = () => {
   // real numbers from the database (no invented statistics): GET /api/hotels/stats
   const [counts, setCounts] = useState({ hotels: 0, rooms: 0, cities: 0 });
   useEffect(() => {
-    API.get("/api/hotels/stats")
+    getHotelStats()
       .then(({ data }) => data.success && setCounts(data.stats))
       .catch(() => {});
   }, []);

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom"; // by claude
 import { Pencil } from "lucide-react"; // by claude
-import Title from "../../components/common/Title";
-import API from "../../lib/axios";
+import Title from "@/shared/components/ui/Title";
+import { getOwnerRooms, toggleRoomAvailability, deleteRoom } from "@/features/rooms/api";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import toast from "react-hot-toast";
-import { useAppStore } from "../../store/useAppStore";
+import { useAppStore } from "@/store/useAppStore";
 
 // by claude: minimal restyle (rounded table, neutral toggle)
 const ListRoom = () => {
@@ -24,7 +24,7 @@ const ListRoom = () => {
         setLoading(true);
         const token = await getToken();
 
-        const { data } = await API.get("/api/rooms/owner", {
+        const { data } = await getOwnerRooms({
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -49,9 +49,7 @@ const ListRoom = () => {
   const toggleAvailability = async (roomId) => {
     try {
       const token = await getToken();
-      const { data } = await API.post(
-        "/api/rooms/toggle-availability",
-        { roomId },
+      const { data } = await toggleRoomAvailability({ roomId },
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -81,7 +79,7 @@ const ListRoom = () => {
 
     try {
       const token = await getToken();
-      const { data } = await API.delete(`/api/rooms/${roomId}`, {
+      const { data } = await deleteRoom(roomId, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

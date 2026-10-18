@@ -1,7 +1,7 @@
 // by claude: footer redesigned (minimal, top border, small uppercase headings)
-import Logo from "./Logo"; // by claude
+import Logo from "@/shared/components/ui/Logo"; // by claude
 import { Link, useNavigate } from "react-router-dom"; // by claude
-import { useAppStore } from "../../store/useAppStore"; // by claude
+import { useAppStore } from "@/store/useAppStore"; // by claude
 import { ArrowRight } from "lucide-react"; // by claude
 import { FaInstagram, FaFacebookF, FaXTwitter, FaLinkedinIn } from "react-icons/fa6"; // by claude (lucide has no brand icons)
 

@@ -1,9 +1,9 @@
 // by claude: section redesigned (same grid as featured), fixed key (_id -> id)
-import Title from "../../common/Title";
-import { useAppStore } from "../../../store/useAppStore";
-import { useRecommendedHotels } from "../../../lib/useHotels"; // by claude
-import HotelCard from "../../common/HotelCard";
-import HotelCardSkeleton from "../../common/HotelCardSkeleton"; // by claude
+import Title from "@/shared/components/ui/Title";
+import { useAppStore } from "@/store/useAppStore";
+import { useRecommendedHotels } from "@/features/hotels/hooks/useHotels"; // by claude
+import HotelCard from "@/features/hotels/components/HotelCard";
+import HotelCardSkeleton from "@/features/hotels/components/HotelCardSkeleton"; // by claude
 
 const RecommendedHotels = () => {
   const searchedCities = useAppStore((state) => state.searchedCities);

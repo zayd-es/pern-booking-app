@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { CalendarCheck, Wallet, TrendingUp } from "lucide-react"; // by claude
-import Title from "../../components/common/Title";
-import { useAppStore } from "../../store/useAppStore";
+import Title from "@/shared/components/ui/Title";
+import { useAppStore } from "@/store/useAppStore";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import API from "../../lib/axios";
+import { getHotelBookings, cancelBooking } from "@/features/bookings/api";
 import toast from "react-hot-toast";
-import Pagination from "../../components/common/Pagination"; // by claude
+import Pagination from "@/shared/components/ui/Pagination"; // by claude
 
 // by claude: minimal restyle (neutral stat cards, rounded table)
 const Dashboard = () => {
@@ -31,7 +31,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
         const token = await getToken();
-        const { data } = await API.get("/api/bookings/hotel", {
+        const { data } = await getHotelBookings({
           params: { page: 1, limit: 10 },
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -58,7 +58,7 @@ const Dashboard = () => {
   const goToPage = async (pageToLoad) => {
     setPageLoading(true);
     try {
-      const { data } = await API.get("/api/bookings/hotel", {
+      const { data } = await getHotelBookings({
         params: { page: pageToLoad, limit: 10 },
         headers: { Authorization: `Bearer ${await getToken()}` },
       });
@@ -90,9 +90,7 @@ const Dashboard = () => {
       return;
     try {
       const token = await getToken();
-      const { data } = await API.patch(
-        `/api/bookings/${booking.id}/cancel`,
-        {},
+      const { data } = await cancelBooking(booking.id, {},
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (data.success) {

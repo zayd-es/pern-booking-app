@@ -1,8 +1,8 @@
 import { Navigate, Outlet } from "react-router-dom";
-import Navbar from "../pages/hotelOwner/_components/Navbar";
+import Navbar from "@/features/owner/components/OwnerNavbar";
 import { useUser } from "@clerk/clerk-react";
-import SideBar from "../pages/hotelOwner/_components/SideBar";
-import { useAppStore } from "../store/useAppStore";
+import SideBar from "@/features/owner/components/SideBar";
+import { useAppStore } from "@/store/useAppStore";
 
 const Layout = () => {
   const { isLoaded, isSignedIn } = useUser();
