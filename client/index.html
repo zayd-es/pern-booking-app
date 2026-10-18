@@ -9,13 +9,12 @@
   <meta name="description" content="Find and book hotels, riads and desert camps across Morocco with Zayd." />
   <meta name="theme-color" content="#ffffff" />
   <script>
-    // by claude: apply the saved theme (or the system one) before React loads, no white flash
     try {
-      var t = localStorage.getItem("theme");
+      const t = localStorage.getItem("theme"); /* by claude: var -> const */
       if (t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
         document.documentElement.classList.add("dark");
       }
-    } catch (e) {}
+    } catch (e) { }
   </script>
 </head>
 
