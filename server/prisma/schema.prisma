@@ -22,7 +22,11 @@ model User {
   updatedAt            DateTime @updatedAt
   hotels Hotel[]
   booking Booking[]
-  reviews Review[] // by claude
+  reviews Review[] 
+}
+enum Role {
+  user
+  hotelOwner
 }
 
 model Hotel {
@@ -30,7 +34,7 @@ model Hotel {
   name      String
   address   String
   contact   String
-  description String? // by claude: shown on the hotel page
+  description String?
   city      String
   country   String   @default("Morocco")
   
@@ -39,11 +43,10 @@ model Hotel {
 
   rooms Room[]
   booking Booking[]
-  reviews Review[] // by claude
+  reviews Review[] 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // by claude: indexes for the lookups we do all the time
   @@index([ownerId])
   @@index([city])
 }
@@ -55,7 +58,7 @@ model Room {
 
   roomType      String
   description   String?
-  pricePerNight Int // by claude: whole currency units (no float rounding errors)
+  pricePerNight Int 
 amenities     String[]  @default([])
   images        String[]
   isAvailable   Boolean  @default(true)
@@ -64,18 +67,8 @@ amenities     String[]  @default([])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // by claude
   @@index([hotelId])
   @@index([isAvailable, createdAt])
-}
-enum Role {
-  user
-  hotelOwner
-}
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
 }
 
 model Booking {
@@ -88,25 +81,28 @@ model Booking {
   hotel         Hotel         @relation(fields: [hotelId], references: [id])
   checkInDate   DateTime
   checkOutDate  DateTime
-  totalPrice    Int // by claude: whole currency units
+  totalPrice    Int 
   guests        Int
   status        BookingStatus @default(PENDING)
   paymentMethod String        @default("Pay At Hotel")
-  paymentIntentId String?     // by claude: Stripe PaymentIntent id, needed to refund a paid booking
-  review        Review?       // by claude: one review per booking
+  paymentIntentId String?    
+  review        Review?    
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  // by claude: my bookings, owner dashboard and the availability check
   @@index([userId, createdAt])
   @@index([hotelId, createdAt])
   @@index([roomId, checkInDate, checkOutDate])
 }
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
 
-// by claude: a guest reviews a hotel after a paid stay (one review per booking)
 model Review {
   id        String   @id @default(cuid())
-  rating    Int      // 1 to 5
+  rating    Int      
   comment   String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -115,9 +111,9 @@ model Review {
   bookingId String   @unique
   booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  editedAt     DateTime? // by claude: set when the guest edits the review
-  ownerReply   String?   // by claude: public answer of the hotel owner
-  ownerReplyAt DateTime? // by claude
+  editedAt     DateTime? 
+  ownerReply   String?  
+  ownerReplyAt DateTime?
 
   @@index([hotelId, createdAt])
   @@index([userId])

@@ -19,6 +19,11 @@ export const SearchForm = () => {
   const { getToken, isSignedIn } = useAuth();
   const navigate = useNavigate();
   const [destination, setDestination] = useState("");
+  const [showCities, setShowCities] = useState(false); // by claude
+  // by claude: cities that contain what the user typed (all cities when empty)
+  const matchingCities = cities.filter((city) =>
+    city.toLowerCase().includes(destination.trim().toLowerCase()),
+  );
 
   const onSearch = async (e) => {
     e.preventDefault();
@@ -50,27 +55,52 @@ export const SearchForm = () => {
       onSubmit={onSearch}
       className="w-full max-w-5xl bg-white rounded-3xl lg:rounded-full border border-gray-200 shadow-xl shadow-gray-200/70 p-2 flex flex-col lg:flex-row lg:items-center divide-y lg:divide-y-0 lg:divide-x divide-gray-200"
     >
-      <label htmlFor="destinationInput" className={fieldClass}>
-        <span className={labelClass}>
-          <MapPin className="h-3.5 w-3.5" />
-          Destination
-        </span>
-        <input
-          list="destinations"
-          id="destinationInput"
-          type="text"
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
-          className={inputClass}
-          placeholder="Where are you going?"
-          required
-        />
-        <datalist id="destinations">
-          {cities.map((city) => (
-            <option value={city} key={city} />
-          ))}
-        </datalist>
-      </label>
+      {/* by claude: custom dropdown instead of <datalist> (datalist does not open on most phones) */}
+      <div className="relative flex-1 min-w-0">
+        <label htmlFor="destinationInput" className={`${fieldClass} block`}>
+          <span className={labelClass}>
+            <MapPin className="h-3.5 w-3.5" />
+            Destination
+          </span>
+          <input
+            id="destinationInput"
+            type="text"
+            value={destination}
+            onChange={(e) => {
+              setDestination(e.target.value);
+              setShowCities(true);
+            }}
+            onFocus={() => setShowCities(true)}
+            onBlur={() => setShowCities(false)}
+            onKeyDown={(e) => e.key === "Escape" && setShowCities(false)}
+            className={inputClass}
+            placeholder="Where are you going?"
+            autoComplete="off"
+            required
+          />
+        </label>
+        {showCities && matchingCities.length > 0 && (
+          <ul className="absolute left-0 right-0 top-full z-30 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5 shadow-xl shadow-gray-200/70">
+            {matchingCities.map((city) => (
+              <li key={city}>
+                {/* onMouseDown (not onClick) so the input keeps focus until a city is picked; works for touch too */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setDestination(city);
+                    setShowCities(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-gray-900 hover:bg-gray-100 cursor-pointer"
+                >
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                  {city}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <label htmlFor="checkIn" className={fieldClass}>
         <span className={labelClass}>
